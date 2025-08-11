@@ -4,6 +4,7 @@ from psycopg2 import OperationalError as Psycopg2OpError
 from django.db.utils import OperationalError
 from django.core.management.base import BaseCommand
 
+
 class Command(BaseCommand):
     """comando django para esperar pela base de dados estar disponivel """
 
@@ -15,7 +16,8 @@ class Command(BaseCommand):
                 self.check(databases=['default'])
                 db_up = True
             except (Psycopg2OpError, OperationalError):
-                self.stdout.write('Base de dados nao disponivel, aguarde 1 segundo...')
+                self.stdout.write('Base de dados nao disponivel,' \
+                                  'aguarde 1 segundo...')
                 time.sleep(1)
 
         self.stdout.write(self.style.SUCCESS('base de dados disponivel'))

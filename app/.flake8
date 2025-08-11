@@ -1,4 +1,6 @@
 [flake8]
+ignore = E502
+
 exclude =
     migrations,
     __pycache__/,
