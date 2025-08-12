@@ -38,7 +38,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'usuarios',
+    'alunos',
+    'financeiro',
+    'transporte',
     'core',
+
 ]
 
 MIDDLEWARE = [
@@ -128,3 +133,6 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# para a questao dos usuarios
+AUTH_USER_MODEL ='usuarios.User'
