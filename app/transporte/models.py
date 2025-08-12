@@ -1,10 +1,12 @@
+"""Models para base de dados de  transporte"""
 from django.db import models
 from django.conf import settings
+
 
 class Motorista(models.Model):
     """Informações do/a motorista"""
 
-    user= models.OneToOneField(
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'role': 'MOTORISTA'},
@@ -16,6 +18,7 @@ class Motorista(models.Model):
 
     def __str__(self):
         return self.user.nome
+
 
 class Veiculo(models.Model):
     placa_matricula = models.CharField(max_length=20)
@@ -33,7 +36,7 @@ class Veiculo(models.Model):
 
 class Rota(models.Model):
     """Informações sobre a rota de trasporte"""
-    nome =  models.CharField(max_length=255)
+    nome = models.CharField(max_length=255)
     descricao = models.TextField(blank=True, null=True)
     veiculo = models.ForeignKey(
         Veiculo,

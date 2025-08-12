@@ -11,13 +11,12 @@ class UserManager(BaseUserManager):
         if not role:
             raise ValueError('O usuário deve ter um papel definido em (role)')
 
-        email= self.normalize_email(email)
+        email = self.normalize_email(email)
         user = self.model(email=email, nome=nome, role=role, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
 
         return user
-
 
     def create_superuser(self, email, nome, password=None, **extra_fields):
         """Cria e retorna super-usuario"""
@@ -46,7 +45,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     data_criacao = models.DateTimeField(auto_now_add=True)
-
 
     objects = UserManager()
 

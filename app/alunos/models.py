@@ -1,21 +1,17 @@
-""" Models para base de dados de Alunos"""
+"""Models para base de dados de Alunos"""
 
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager, PermissionsMixin)
-
-
-
-
+# from django.contrib.auth.models import (AbstractBaseUser, BaseUserManager, PermissionsMixin)
 
 
 class Encarregado(models.Model):
     """Pessoa responsavel pelo/a(s) aluno/a(s)"""
-    user= models.OneToOneField(
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-            on_delete=models.CASCADE,
-            limit_choices_to={'role':'ENCARREGADO'},
-            related_name='perfil_encarregado'
+        on_delete=models.CASCADE,
+        limit_choices_to={'role': 'ENCARREGADO'},
+        related_name='perfil_encarregado'
     )
 
     telefone = models.CharField(max_length=20)
