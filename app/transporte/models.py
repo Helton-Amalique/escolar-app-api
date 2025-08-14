@@ -12,12 +12,12 @@ class Motorista(models.Model):
         limit_choices_to={'role': 'MOTORISTA'},
         related_name='perfil_motorista'
     )
-
+    telefone = models.CharField(max_length=25, default='sem telefone')
     carta_nr = models.CharField(max_length=50)
     validade_da_carta = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return self.user.nome
+        return self.user.nome()
 
 
 class Veiculo(models.Model):

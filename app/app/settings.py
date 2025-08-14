@@ -38,11 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'usuarios',
+    'core',
     'alunos',
     'financeiro',
     'transporte',
-    'core',
 
 ]
 
@@ -135,4 +134,4 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # para a questao dos usuarios
-AUTH_USER_MODEL ='usuarios.User'
+AUTH_USER_MODEL ='core.User'
