@@ -35,7 +35,7 @@ class Command(BaseCommand):
 
         for s in options.get('valor_aluno', []):
             try:
-                nome, valor = s.split(':')
+                nome, valor = s.split(':', 1)
                 valor_individual[nome.strip()] = float(valor.strip())
             except:
                 self.stdout.write(self.style.ERROR(f'Formato invalido para --valor_aluno: {s}. Use nome:valor'))
@@ -54,5 +54,8 @@ class Command(BaseCommand):
                     valor=valor
                 )
                 total_criados += 1
-                self.stdout.write(self.style.SUCCESS(f'Pagamento criado: {aluno.nome} - MTN {valor: 2f}'))
+                self.stdout.write(self.style.SUCCESS(f'Pagamento criado: {aluno.nome} - MTN {valor:.2f}'))
+            else:
+                self.stdout.write(f'Pagamento já existe: {aluno.nome} - {mes_referente.strftime("%Y-%m")}')
+
         self.stdout.write(self.style.SUCCESS(f'Total do pagamento criados: {total_criados}'))
