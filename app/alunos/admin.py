@@ -6,7 +6,7 @@ from core.admin_mixins.mixins import BaseAdmin
 @admin.register(Aluno)
 class AlunoAdmin(BaseAdmin):
     list_display = ('nome', 'encarregado', 'escola_dest', 'classe', 'activo', 'rota')
-    list_filter = ('classe','activo')
+    list_filter = ('classe', 'activo')
     search_fields = ('nome', 'escola_dest', 'classe')
     date_hierarchy = 'data_nascimento'
 
@@ -19,9 +19,10 @@ class AlunoAdmin(BaseAdmin):
         }),
     )
 
+
 @admin.register(Encarregado)
 class EncarregadoAdmin(admin.ModelAdmin):
-    list_display = ('user','telefone','endereco')
+    list_display = ('user', 'telefone', 'endereco')
     search_fields = ('user__nome', 'telefone', 'endereco')
 
     fieldsets = (
@@ -29,4 +30,3 @@ class EncarregadoAdmin(admin.ModelAdmin):
             'fields': ('user', 'telefone', 'endereco')
         }),
     )
-
