@@ -39,6 +39,7 @@ class Aluno(models.Model):
         blank=True
     )
     activo = models.BooleanField(default=True)
+    mensalidade = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.nome

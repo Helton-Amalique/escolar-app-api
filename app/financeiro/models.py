@@ -17,9 +17,16 @@ class Pagamento(models.Model):
         choices=[("PAGO", "Pago"), ("PENDENTE", "Pendente")],
         default="PENDENTE"
     )
+    data_pagamento = models.DateTimeField(auto_now_add=True)
+
+    # def save(self, *args, **Kwargs):
+    #     # criado para marcar como pago apois a confirmacao.
+    #     if not self.pk:
+    #         self.status = 'pago'
+    #         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.aluno.nome} - {self.mes_referente}'
+        return f'{self.aluno.nome} - {self.valor} - {self.mes_referente} - {self.status}'
 
 
 class Salario(models.Model):
@@ -27,7 +34,7 @@ class Salario(models.Model):
     funcionario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'role__in': ['FUNCIONARIO', 'MOTORISTA']},
+        limit_choices_to={'role__in': ['FUNCIONARIO', 'MOTORISTA', 'ADMINISTRADOR']},
         related_name='salarios'
     )
 
@@ -39,6 +46,13 @@ class Salario(models.Model):
          choices=[("PAGO", "Pago"), ("PENDENTE", "Pendente")],
         default="PENDENTE"
     )
+    data_pagamento = models.DateTimeField(auto_now_add=True)
+
+    # def save(self, *args, **Kwargs):
+    #     # criado para marcar como pago apois a confirmacao d pagamento.
+    #     if not self.pk:
+    #         self.status = 'pago'
+    #         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.funcionario.nome} - {self.mes_referente}'
+        return f'{self.funcionario.nome} - {self.valor} - {self.mes_referente} - {self.status}'

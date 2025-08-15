@@ -11,7 +11,7 @@ class UserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
-    list_display = ('nome', 'email', 'role', 'is_active', 'is_staff')
+    list_display = ('nome', 'email', 'role', 'salario', 'is_active', 'is_staff')
     list_filter = ('role', 'is_active', 'is_staff')
     search_fields = ('nome', 'email')
     ordering = ('nome',)
@@ -27,6 +27,9 @@ class UserAdmin(BaseUserAdmin):
         }),
         ('Permissões', {
             'fields': ('is_staff', 'is_superuser', 'is_active', 'groups', 'user_permissions')
+        }),
+        ('Funcao e salario', {
+            'fields': ('salario',)
         }),
         ('Datas Importantes', {
             'fields': ('last_login', 'data_criacao', 'data_atualizacao')
