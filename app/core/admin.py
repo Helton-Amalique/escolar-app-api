@@ -16,6 +16,8 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('nome', 'email')
     ordering = ('nome',)
 
+    readonly_fields = ('data_criacao', 'data_atualizacao', 'last_login')
+
     fieldsets = (
         ('Informações de Login', {
             'fields': ('email', 'password')
@@ -24,10 +26,10 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('nome', 'role')
         }),
         ('Permissões', {
-            'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')
+            'fields': ('is_staff', 'is_superuser', 'is_active', 'groups', 'user_permissions')
         }),
         ('Datas Importantes', {
-            'fields': ('last_login', 'data_criacao')
+            'fields': ('last_login', 'data_criacao', 'data_atualizacao')
         }),
     )
 

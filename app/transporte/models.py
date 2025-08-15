@@ -17,7 +17,7 @@ class Motorista(models.Model):
     validade_da_carta = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return self.user.nome()
+        return self.user.nome
 
 
 class Veiculo(models.Model):
