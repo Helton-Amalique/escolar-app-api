@@ -48,10 +48,16 @@ class UserAdmin(BaseUserAdmin):
         Salva o usuário e adiciona ao grupo correspondente ao role.
         """
         super().save_model(request, obj, form, change)
+        """#so se role estiver difinido"""
+        if obj.role:
+            role_group = Group.objects.filter(name=obj.role.upper()).first()
+            if role_group:
+                # obj.groups.clear()
+                # adiciona ao grupo do role sem apagar os outros
+                obj.groups.add(role_group)
+                obj.save()
 
-        # Associa grupo com base no role
-        role_group = Group.objects.filter(name=obj.role.upper()).first()
-        if role_group:
-            obj.groups.clear()
-            obj.groups.add(role_group)
-            obj.save()
+    def role_display(self, obj):
+        """Exibe o nime legivel da funcao"""
+        return obj.get_role()
+    role_display.short_description = 'Funcao'

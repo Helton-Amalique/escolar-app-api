@@ -135,3 +135,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # para a questao dos usuarios
 AUTH_USER_MODEL ='core.User'
+
+# settings.py adicionado por mim para teste de recibos e alertas
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
