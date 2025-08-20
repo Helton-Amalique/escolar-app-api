@@ -2,7 +2,11 @@
 from django.db import models
 from django.conf import settings
 from datetime import date, datetime
+from decimal import Decimal
 from django.utils import timezone
+from alunos.models import Aluno, Encarregado
+from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 
 
 class StatusMixin(models.Model):
@@ -41,8 +45,22 @@ class Pagamento(StatusMixin):
         on_delete=models.CASCADE,
         related_name='pagamentos'
     )
-    valor = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    valor = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.0'))],
+        null=True, blank=True)
     mes_referente = models.DateField("mes de referencia")
+
+    def clean(self):
+        if self.data_pagamento and self.data_pagamento > date.today():
+            raise ValidationError(" a data de pagamento nao pode ser no futuro")
+
+        if Pagamento.objects.filter(aluno=self.aluno, mes_referente=self.mes_referente).exclude(pk=self.pk).exists():
+            raise ValidationError("Ja existe um pagamento para ese aluno neste mes")
+
+    class Meta:
+        unique_together = ('aluno', 'mes_referente')
 
     def __str__(self):
         return f'{self.aluno.nome} - {self.valor} - {self.mes_referente} - {self.status}'
@@ -60,5 +78,40 @@ class Salario(StatusMixin):
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     mes_referente = models.DateField("Mes de referencia")
 
+    def clean(self):
+        if self.data_pagamento and self.data_pagamento > date.today():
+            raise ValidationError("Data de pagamento nao pode ser no futoro.")
+
     def __str__(self):
         return f'{self.funcionario.nome} - {self.valor} - {self.mes_referente} - {self.status}'
+
+
+class AlertaEnviado(models.Model):
+    """Alerta enviados para os encarregados"""
+    encarregado = models.ForeignKey(
+        Encarregado,
+        on_delete=models.CASCADE,
+        related_name='alertas'
+    )
+    alunos = models.ManyToManyField(
+        Aluno,
+        related_name="alerta_enviados"
+    )
+    email = models.EmailField()
+    mensagem = models.TextField()
+    enviado_em = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=50, default="ENVIADO")
+
+    def clean(self):
+        if not self.email:
+            raise ValidationError("O email do encarregado e obrigatorio para envio de alerta.")
+
+        if not self.enviado_em and self.enviado_em > date.today():
+            raise ValidationError("A data de envio nao pode ser no futuro.")
+
+        if not self.alunos.count() == 0:
+            raise ValidationError("O alerta deve estar associado pelo menis um aluno.")
+
+    def __str__(self):
+        # return f"{self.eviado_em.strftime('%d/%m/%Y %H:%M')}"
+        return f'Alerta {self.status} para {self.encarregado.user.email}'

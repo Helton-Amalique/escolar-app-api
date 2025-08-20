@@ -1,11 +1,13 @@
 from django.contrib import admin
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from datetime import date
 from django.utils.html import format_html
 from core.admin_mixins.mixins import BaseAdmin
-from financeiro.models import Pagamento, Salario
+from financeiro.models import Pagamento, Salario, AlertaEnviado
 from financeiro.management.services.alerta import enviar_alerta
-from financeiro.utils import gerar_recibo
+from financeiro.management.services.recibos import gerar_recibo
+from django.db.models import Count
 
 
 class StatusActionMixins:
@@ -17,8 +19,12 @@ class StatusActionMixins:
         for obj in queryset:
             obj.status = "PAGO"
             if not obj.data_pagamento:
-                obj.data_pagamento = timezone.now()
-            obj.save()
+                obj.data_pagamento = timezone.now().date()
+            try:
+                obj.full_clean()  # validar ander de salvar
+                obj.save()
+            except ValidationError as e:
+                self.message_user(request, f"Erro: {obj} -> {e}", level='error')
         self.message_user(request, f"{queryset.count()} registro marcado como PAGO")
     marcar_como_pago.short_description = "Marcar como PAGO"
 
@@ -28,7 +34,11 @@ class StatusActionMixins:
         for obj in queryset:
             obj.status = "PENDENTE"
             obj.data_pagamento = None
-            obj.save()
+            try:
+                obj.full_clean()
+                obj.save()
+            except ValidationError as e:
+                self.message_user(request, f"Erro: {obj} -> {e}", level='error')
             self.message_user(request, f"{queryset.count()} registro marcado como PENDENTE")
     marcar_como_pendente.short_description = "Marcar como PENDENTE"
 
@@ -38,7 +48,11 @@ class StatusActionMixins:
         for obj in queryset:
             obj.status = "ATRASADO"
             obj.data_pagamento = None
-            obj.save()
+            try:
+                obj.full_clean()
+                obj.save()
+            except ValidationError as e:
+                self.message_user(request, f"Erro: {obj} -> {e}", level='error')
         self.message_user(request, f"{queryset.count()} registro marcado como ATRASADO")
     marcar_como_atrasado.short_description = "Marcar como ATRASADO"
 
@@ -77,17 +91,16 @@ class BasePagamentoAdmin(StatusActionMixins, admin.ModelAdmin):
         hoje = date.today()
         if obj.status == 'PAGO':
             cor = '#d4edda'  # Verde claro
+        elif obj.status == 'PENDENTE' and obj.mes_referente < hoje.replace(day=10):
+            cor = '#f8d7da'  # Vermelho claro
         else:
-            if obj.status == 'PENDENTE' and obj.mes_referente < hoje.replace(day=10):
-                cor = '#f8d7da'  # Vermelho claro
-            else:
-                cor = '#fff3cd'  # Amarelo claro
+            cor = '#fff3cd'  # Amarelo claro
 
-            return format_html(
-                '<span style="background-color: {}; padding: 4px 8px; border-radius: 4px;">{}</span>',
-                cor,
-                obj.status
-            )
+        return format_html(
+            '<span style="background-color: {}; padding: 4px 8px; border-radius: 4px;">{}</span>',
+            cor,
+            obj.status
+        )
     status_colorido.short_description = 'Status'
 
     def gerar_recibos(self, request, queryset):
@@ -107,7 +120,6 @@ class PagamentoAdmin(BasePagamentoAdmin):
     list_filter = ('status', 'mes_referente', StatusListFilter)
     search_fields = ('aluno__nome',)
     readonly_fields = ('data_pagamento',)
-
     actions = ["gerar_recibos", 'enviar_alerta', 'marcar_como_pago']
 
     fieldsets = (
@@ -120,8 +132,7 @@ class PagamentoAdmin(BasePagamentoAdmin):
     )
 
     def enviar_alerta(self, request, queryset):
-        reusltados = [enviar_alerta(p)
-                      for p in queryset if p.status != 'PAGO']
+        reusltados = [enviar_alerta(p) for p in queryset if p.status != 'PAGO']
         self.message_user(request, f"Alertas enviados: {len(reusltados)}")
     enviar_alerta.short_description = "Enviar alerta de pagamentos pendentes"
 
@@ -131,13 +142,42 @@ class SalarioAdmin(BasePagamentoAdmin):
     list_display = ('id', 'funcionario', 'valor', 'mes_referente', 'status_colorido', 'data_pagamento')
     list_filter = ('status', 'mes_referente')
     search_fields = ('funcionario__nome',)
-
-    # readonly_fields = ('data_pagamento',)
-
-    # actions = ['marca_como_pago', 'marcar_como_pendente', 'marca_como_atrasado', 'gerar_recibos']
+    readonly_fields = ('data_pagamento',)
+    actions = ['marcar_como_pago', 'marcar_como_pendente', 'marcar_como_atrasado', 'gerar_recibos']
 
     fieldsets = (
         ('Informacoes do Pagamento dos Salario', {
             'fields': ('funcionario', 'mes_referente', 'valor', 'status', 'data_pagamento')
         }),
     )
+
+
+@admin.register(AlertaEnviado)
+class AlertaEnviadoAdmin(admin.ModelAdmin):
+    list_display = ('encarregado', 'email', 'enviado_em', 'status')
+    search_fields = ('encarregado__user__name', 'email', 'mensagem')
+    list_filter = ('status', 'enviado_em')
+    autocomplete_fields = ('encarregado', 'alunos')
+    date_hierarchy = 'enviado_em'
+
+    def alunos_list(self, obj):
+        return ", ".join([a.nome for a in obj.alunos.all()])
+    alunos_list.short_description = "Alunos"
+
+    """Relatorio total do mes"""
+    # change_list_template = "admin/financeiro/alertaenviado_change_list.html"
+
+    def changelist_view(self, request, extra_context=None):
+        queryset = self.get_queryset(request)
+        report = (
+            queryset
+            .extra(select={'month': "to_char(enviado_em, 'YYYY-MM')"})
+            .values('month')
+            .annotate(total=Count('id'))
+            .order_by('-month')
+        )
+
+        extra_context = extra_context or {}
+        extra_context['report'] = report
+
+        return super().changelist_view(request, extra_context=extra_context)
