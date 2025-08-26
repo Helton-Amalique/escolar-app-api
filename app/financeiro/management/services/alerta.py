@@ -36,11 +36,16 @@ def enviar_alerta(p):
         ]
 
         mensagem = (
-            f"Olá {encarregado.nome},\n\n"
-            f"Verificamos que existem pagamento(s) em atraso dos dues educando(s):\n\n"
-            + "\n".join(linhas)
-            +"\n\nPor favor, regularize o(s) pagamento(s) o mais breve possível."
+            f"Olá {encarregado.nome} ,\n\n"
+            f"Verificamos que existem pagamento(s) em atraso do(s) educando(s):  Por favor, regularize o(s) pagamento(s) o mais breve possível."
         )
+
+        # mensagem = (
+        #     f"Olá {encarregado.nome} ,\n\n"
+        #     f"Verificamos que existem pagamento(s) em atraso dos dues educando(s):\n\n"
+        #     + "\n" .join(linhas)
+        #     + "\n\nPor favor, regularize o(s) pagamento(s) o mais breve possível."
+        # )
 
         try:
             send_mail(

@@ -42,7 +42,9 @@ INSTALLED_APPS = [
     'alunos',
     'financeiro',
     'transporte',
-
+    'rest_framework',
+    'drf_spectacular',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -138,3 +140,16 @@ AUTH_USER_MODEL ='core.User'
 
 # settings.py adicionado por mim para teste de recibos e alertas
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Transporte Escolar',
+    'DESCRIPTION': 'Sistema de gestão de transporte escolar com registro de alunos, encarregados, rotas, carros e financeiro.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+
+    # 'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+}
