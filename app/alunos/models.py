@@ -1,46 +1,27 @@
 """Models para base de dados de Alunos"""
-import re
 from django.db import models
 from django.conf import settings
 from datetime import date
 from decimal import Decimal
-from django.core.validators import RegexValidator, MinValueValidator, EmailValidator, ValidationError
+from django.core.validators import MinValueValidator, EmailValidator, ValidationError
+from phonenumber_field.modelfields import PhoneNumberField
 
 validar_email = EmailValidator(message='Degite um email valido')
 
 
 class Encarregado(models.Model):
     """Pessoa responsavel pelo/a(s) aluno/a(s)"""
+    # nome = models.CharField(max_length=255, db_index=True)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'role': 'ENCARREGADO'},
         related_name='perfil_encarregado'
     )
-
-    telefone = models.CharField(
-        max_length=20
-    )
-
-    def clean(self):
-        if self.telefone:
-            telefone = self.telefone.strip().replace(" ", "")
-
-            # Normalização: adiciona +258 se não existir
-            if telefone.startswith("8") or telefone.startswith("2"):
-                telefone = f"+258{telefone}"
-
-            padrao = r"^\+258(8[2-7]\d{7}|2\d{8})$"
-            # 8X = móvel | 2X = fixo
-
-            if not re.match(padrao, telefone):
-                raise ValidationError({"telefone": "Número inválido. Ex: +258841234567"})
-
-            self.telefone = telefone
+    telefone = PhoneNumberField(region="MZ")
+    nrBI = models.CharField(max_length=30, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
 
     def save(self, *args, **kwargs):
-        if self.user:
-            self.user = self.user.strip().title()
         self.full_clean()
         super().save(*args, **kwargs)
 
@@ -54,10 +35,11 @@ class Aluno(models.Model):
     """Informações de aluno"""
     nome = models.CharField(max_length=255, db_index=True)
     data_nascimento = models.DateField()
+    nrBI = models.CharField(max_length=30, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
     encarregado = models.ForeignKey(
         Encarregado,
         on_delete=models.CASCADE,
-        related_name='alunos'
+        related_name='alunos',
     )
     escola_dest = models.CharField(max_length=255)
     classe = models.CharField(max_length=25)

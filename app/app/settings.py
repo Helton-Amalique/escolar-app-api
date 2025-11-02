@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 import os
 from pathlib import Path
+from celery.schedules import crontab
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -45,6 +46,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'rest_framework_simplejwt',
+    'django_filters',
+    'phonenumber_field',
 ]
 
 MIDDLEWARE = [
@@ -138,10 +141,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # para a questao dos usuarios
 AUTH_USER_MODEL ='core.User'
 
-# settings.py adicionado por mim para teste de recibos e alertas
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# # settings.py adicionado por mim para teste de recibos e alertas
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+
+    # "DEFAULT_PAGINATION_CLASS": [
+    #     "rest_framework.pagination.CursorPagination",
+    #     "PAGE_SIZE": 10,
+    # ],
+
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
+
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -152,4 +174,33 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 
     # 'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+}
+
+#configuracao basica para envio via SMTP
+EMAIL_BaCKEND = "django.core.mail.backends.smto.EmailBackend"
+EMAIL_HOST = "smtp.seuProvedor.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "meuemail@dominio.com"
+EMAIL_HOST_PASSWORD = "senha"
+
+DEFAULT_FROM_EMAIL = "Financeiro <meuemail@dominio.com>"
+
+# Celery
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BEAT_SCHEDULE = {}
+
+
+CELERY_BEAT_SCHEDULE = {
+    "enviar-recibos-mensais": {
+        "task": "financeiro.tasks.enviar_recibos_mes",
+        "schedule": crontab(day_of_month=1, hour=0, minute=0)
+        # todos os dias 1, as 08h
+    },
+
+    "alertas-mensalidades-diarios": {
+        "task": "financeiro.tasks.tarefa_verificar_alertas_mensalidades",
+        "schedule": crontab(hour=8, minute=0), # todos os dias as 08h
+    }
 }

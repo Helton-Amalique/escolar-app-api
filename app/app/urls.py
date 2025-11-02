@@ -32,10 +32,12 @@ urlpatterns = [
     path('api/core/', include('core.urls')),
     # path('user', include('user.urls')),
 
+    path('admin/', admin.site.urls),
+
     path('/api/admin/', admin.site.urls),
-    path('api/alunos/', include('alunos.urls')),
-    path('api/transporte/', include('transporte.urls')),
-    path('api/financeiro/', include('financeiro.urls')),
+    # path('api/alunos/', include('alunos.urls')),
+    # path('api/transporte/', include('transporte.urls')),
+    # path('api/financeiro/', include('financeiro.urls')),
 
 ]
 

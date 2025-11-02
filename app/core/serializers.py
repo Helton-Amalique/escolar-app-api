@@ -8,7 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'nome', 'role', 'salario',
+            'id', 'email', 'nome', 'apelido', 'role', 'salario',
             'is_active', 'is_staff', 'data_criacao', 'data_atualizacao'
         ]
         read_only_fields = ['id', 'data_criacao', 'data_atualizacao']
@@ -19,16 +19,16 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'nome', 'role', 'password')
+        fields = ('id', 'email', 'nome', 'apelido', 'role', 'password')
 
     def create(self, validated_data):
-        user = User.objects.create_user(
+        return User.objects.create_user(
             email=validated_data['email'],
             nome=validated_data['nome'],
-            role=validated_data['role'],
+            apelido=validated_data['apelido'],
+            role=validated_data['role', "ENCARREGADO"],
             password=validated_data['password'],
         )
-        return user
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
@@ -43,51 +43,3 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['confirm_password']:
             raise serializers.ValidationError('As senhas nao coincidem.')
         return attrs
-
-
-# from rest_framework import serializers
-# from django.contrib.auth import get_user_model
-# # from core.models import User
-
-# User = get_user_model()
-
-
-# class UserSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = [
-#             'id', 'email', 'nome', 'role', 'salario',
-#             'is_active', 'is_staff', 'data_criacao', 'data_atualizacao'
-#         ]
-#         read_only_fields = ['id', 'data_criacao', 'data_atualizacao']
-
-
-# class RegisterSerializer(serializers.ModelSerializer):
-#     password = serializers.CharField(write_only=True, min_length=8)
-
-#     class Meta:
-#         model = User
-#         fields = ('id', 'email', 'nome', 'role', 'password')
-
-#     def create(self, validated_data):
-#         user = User.objects.create_user(
-#             email=validated_data['email'],
-#             nome=validated_data['nome'],
-#             role=validated_data['role'],
-#             password=validated_data['password'],
-#         )
-#         return user
-
-
-# class PasswordResetRequestSerializer(serializers.Serializer):
-#     email = serializers.EmailField()
-
-
-# class PasswordResetConfirmSerializer(serializers.Serializer):
-#     new_password = serializers.CharField(write_only=True, required=True, min_length=8)
-#     confirm_password = serializers.CharField(write_only=True, required=True, min_length=8)
-
-#     def validate(self, attrs):
-#         if attrs['new_password'] != attrs['confirm_password']:
-#             raise serializers.ValidationError('As senhas nao coincidem.')
-#         return attrs

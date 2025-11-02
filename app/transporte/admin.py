@@ -4,66 +4,60 @@ from core.admin_mixins.mixins import BaseAdmin
 
 
 @admin.register(Motorista)
-class MotoristaAdmin(BaseAdmin):
-    list_display = ('nome', 'telefone', 'carta_nr', 'validade_da_carta')
-    search_fields = ('user__nome', 'telefone')
+class MotoristaAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "telefone", "ativo", "validade_da_carta", "criado_em", "atualizado_em")
+    list_filter = ("ativo", "validade_da_carta")
+    search_fields = ("user__nome", "user__email", "telefone", "carta_nr")
+    readonly_fields = ("criado_em", "atualizado_em")
+    ordering = ("-criado_em",)
 
-    def nome(self, obj):
-        return obj.user.nome
-    nome.admin_order_field = 'user__nome'
-    nome.short_description = 'Nome'
+    def get_user_nome(self, obj):
+        return getattr(obj.user, "nome", "")
+    get_user_nome.short_description = "Nome do Usuario"
 
-    def veiculos_count(self, obj):
-        return obj.veiculos.count()
-    veiculos_count.short_description = 'Veiculos'
+    def get_user_email(self, obj):
+        return getattr(obj.user, "email", "")
+    get_user_email.shot_description = "Email do Usuario"
 
 
 @admin.register(Veiculo)
-class VeiculoAdmin(BaseAdmin):
-    list_display = ('placa_matricula', 'modelo_carro', 'capacidade', 'motorista', 'ativo')
-    search_fields = ('placa_matricula', 'modelo_carro', 'motorista__user__nome')
-    list_filter = ('capacidade', 'motorista', 'ativo')
+class VeiculoAdmin(admin.ModelAdmin):
+    list_display = ("modelo", "matricula", "capacidade", "motorista", "ativo", "criado_em", "atualizado_em")
+    list_filter =("ativo", "motorista", "capacidade")
+    search_fields = ("modelo", "matricula")
+    readonly_fields = ("criado_em", "atualizado_em")
+    ordering = ("matricula",)
 
-    fieldsets = (
-        ('Informacoes do Veiculo', {
-            'fields': ('placa_matricula', 'modelo_carro', 'capacidade', 'motorista', 'ativo')
-        }),
-    )
-
-    actions = ['ativar_veiculos', 'desativar_veiculos']
-
-    def ativar_veiculos(self, request, queryset):
-        updated = queryset.update(ativo=False)
-        self.message_user(request, f"{updated} veicolo(s) ativado(s)")
-    ativar_veiculos.short_description = "Ativar veiculos selecionados"
-
-    def desativar_veiculos(self, request, queryset):
-        updated = queryset.update(ativo=True)
-        self.message_user(request, f"{updated} veicolo(s) desativado(s)")
-    desativar_veiculos.short_description = "Desativar veiculos selecionados"
+    def motorista_nome(self, obj):
+        if obj.motorista:
+            return obj.motorista.user.nome
+        return "-"
+    motorista_nome.shot_description = "Motorista"
 
 
 @admin.register(Rota)
 class RotaAdmin(BaseAdmin):
-    list_display = ('nome', 'veiculo', 'ativo')
-    search_fields = ('nome', 'veiculo__placa_matricula')
-    ordering = ('nome',)
-    list_filter = ('ativo',)
+    list_display = ("nome", "veiculo", "motorista_atribuido", "ativo", "criado_em", "atualizado_em")
+    list_filter = ("ativo", "veiculo__motorista", "veiculo__motorista__ativo")
+    search_fields = ("nome", "descricao", "veiculo__placa_matricula", "veiculo__motorista__user__nome")
+    readonly_fields = ("criado_em", "atualizado_em")
+    ordering = ("nome",)
 
-    fieldsets = (
-        ('Detalhes da Rota', {
-            'fields': ('nome', 'descricao', 'veiculo', 'ativo')
-        }),
-    )
+    def veiculo_nome(self, obj):
+        if obj.veiculo:
+            return obj.veiculo.modelo_carro
+        return "-"
+    veiculo_nome.short_description = "Veiculo"
 
-    actions = ['ativar_rotas', 'desativar_rotas']
+    def get_placa_matricula(self, obj):
+        if obj.veiculo:
+            return obj.veiculo.placa_matricula
+        return "-"
+    get_placa_matricula.short_description = "Placa"
 
-    def ativar_rotas(self, request, queryset):
-        updated = queryset.update(ativo=True)
-        self.message_user(request, f"{updated} rota(s) ativada(s).")
-    ativar_rotas.short_desciption = "Ativar rotas selecionadas"
-
-    def desativar_rotas(self, request, queryset):
-        updated = queryset.update(ativo=False)
-        self.message_user(request, f"{updated} rota(s) ativada(s).")
-    desativar_rotas.short_desciption = "Desativar rotas selecionadas"
+    def get_motorista_nome(self, obj):
+        """exibo o motorista do veiculo associado a rota"""
+        if obj.veiculo and obj.veiculo.motorista:
+            return obj.veiculo.motorista.user.nome
+        return "-"
+    get_motorista_nome.short_description = "Motorista"

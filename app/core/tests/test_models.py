@@ -1,20 +1,17 @@
-# """ Testes para models"""
+from django.test import TestCase
+from django.contrib.auth import get_user_model
 
-# from django.test import TestCase
-# from django.contrib.auth import get_user_model
+User = get_user_model()
 
-# class ModelTest(TestCase):
-#     """Test models"""
-
-#     def test_create_user_With_email_successful(sefl):
-#         """Test criando um user com email com sucesso"""
-
-#         email ='test@exambple.com'
-#         password ='test123'
-#         user = get_user_model().objects.create_user(
-#             email=email,
-#             password=password,
-#         )
-
-#         self.assertEqual(user.email, email)
-#         self.assertTrue(user.check_password(password))
+class UserModelTestCase(TestCase):
+    def test_cria_usuario(self):
+        user = User.objects.create_user(
+            email="test@example.com",
+            nome="Joao Lorenco",
+            role="ENCARREGADO",
+            password="Senhacommais8"
+        )
+        self.assertEqual(user.email, "test@example.com")
+        self.assertTrue(user.check_password("Senhacommais8"))
+        self.assertEqual(user.role, "ENCARREGADO")
+        self.assertTrue(user.is_active)

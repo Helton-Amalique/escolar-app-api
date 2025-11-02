@@ -1,5 +1,6 @@
 #version: "3.9"
 
+
 services:
   app:
     build:
@@ -34,3 +35,33 @@ services:
 
 volumes:
   dev-db-data:
+
+
+
+# services:
+#   django:
+#     build: .
+#     command: sh -c "python manage.py wait_for_db &&
+#               python manage.py migrate &&
+#               python manage.py runserver 0.0.0.0:8000"
+#     volumes:
+#       - "app:/app"
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       - redis
+
+#   celery:
+#     build: .
+#     command: celery -A app worker -l info
+#     volumes:
+#       - ./app:/app
+#     depends_on:
+#       - redis
+#       - django
+
+#   redis:
+#     image: redis:7-alpine
+#     ports:
+#       -6379:6379
+
