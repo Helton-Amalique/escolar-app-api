@@ -1,11 +1,12 @@
 """Models para base de dados de  transporte"""
-from datetime import date, time
+import datetime
+from datetime import date
 from django.db import models
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 from django.core.validators import RegexValidator, MinValueValidator, EmailValidator
-
-
+from phonenumber_field.modelfields import PhoneNumberField
 
 validar_telefone = RegexValidator(
     regex=r'^\+?\d{9}$',
@@ -17,9 +18,11 @@ validar_placa = RegexValidator(
     message='Placa inválida. Ex: ABC-1234 ou ABC-123-XY'
 )
 
-class ActivoManeger(models.Manager):
+
+class ActivoManager(models.Manager):
     def ativos(self):
         return self.filter(ativo=True)
+
 
 class Motorista(models.Model):
     """Informações do/a motorista"""
@@ -27,31 +30,36 @@ class Motorista(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'role': 'MOTORISTA'},
+        limit_choices_to=Q(role__nome='MOTORISTA'),
         related_name='perfil_motorista'
     )
-    nome = models.CharField(max_length=100, null=True, blank=True, help_text="Nome do motorista")
-    telefone = models.CharField(max_length=25, validators=[validar_telefone], help_text="O numero de telefone com 9 digitos", db_index=True)
+    telefone = PhoneNumberField(region="MZ", help_text="O numero de telefone com 9 digitos", db_index=True)
     endereco = models.CharField(max_length=200, blank=True, null=True)
 
-    carta_nr = models.CharField(max_length=50, db_index=True)
-    validade_da_carta = models.DateField(null=True, blank=True)
-    ativo = models.BooleanField(default=True)
+    carta_nr = models.CharField(max_length=50, unique=True, db_index=True)
+    validade_da_carta = models.DateField()
+    ativo = models.BooleanField(default=True, db_index=True)
     criado_em = models.DateTimeField(auto_now_add=True, null=True)
     atualizado_em = models.DateTimeField(auto_now=True, null=True)
 
-    objects = ActivoManeger()
+    objects = ActivoManager()
+
+    class Meta:
+        verbose_name = 'Motorista'
+        verbose_name_plural = 'Motoristas'
+        ordering = ['-criado_em']
 
     def __str__(self):
-        return self.nome or str(self.user)
-        # return getattr(self.user, "nome", str(self.user))
+        return getattr(self.user, "nome", str(self.user))
 
+    def clean(self):
+        super().clean()
+        if self.validade_da_carta and self.validade_da_carta < date.today():
+            raise models.ValidationError({'validade_da_carta': 'A carta de condução está expirada.'})
 
-    def carta_valida(self):
-        """retoran True se a carta de conducao  estiver valida"""
-        if self.validade_da_carta:
-            return self.validade_da_carta >= date.today()
-        return False
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Veiculo(models.Model):
@@ -61,24 +69,40 @@ class Veiculo(models.Model):
     capacidade = models.PositiveIntegerField(validators=[MinValueValidator(1)], help_text="Numero maximo de Passageiros")
     motorista = models.ForeignKey(
         Motorista,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True, blank=True,
         related_name='veiculos'
         )
-    ativo = models.BooleanField(default=True)
+    ativo = models.BooleanField(default=True, db_index=True)
     criado_em = models.DateTimeField(auto_now_add=True, null=True)
     atualizado_em = models.DateTimeField(auto_now=True, null=True)
+
+    objects = ActivoManager()
+
+    class Meta:
+        verbose_name = 'Veículo'
+        verbose_name_plural = 'Veículos'
+        ordering = ['matricula']
 
     def save(self, *args, **kwargs):
         self.modelo = self.modelo.strip()
         self.matricula = self.matricula.strip().upper()
         super().save(*args, **kwargs)
 
-    # objects = ActivoManeger()
+    @property
+    def vagas_disponiveis(self):
+        """Retorna o número de lugares disponíveis no veículo."""
+        if not hasattr(self, 'rota'):
+            return self.capacidade
+        
+        # Assumindo que a relação inversa de Aluno para Rota é 'alunos'
+        # e que o Veiculo so pode ter uma rota
+        rota_unica = self.rotas.first()
+        if not rota_unica:
+            return self.capacidade
 
-    def vagas_disponives(self, ocupados=0):
-        """retorna o numero de ligares disponives na carrinha"""
-        return max(self.capacidade - ocupados, 0)
+        alunos_na_rota = rota_unica.alunos.count()
+        return max(self.capacidade - alunos_na_rota, 0)
 
     def __str__(self):
         return f'{self.modelo} - {self.matricula}'
@@ -86,21 +110,29 @@ class Veiculo(models.Model):
 
 class Rota(models.Model):
     """Informações sobre a rota da carrinha escolar"""
-    nome = models.CharField(max_length=255)
-    motorista = models.ForeignKey(Motorista, on_delete=models.SET_NULL, null=True, blank=True, related_name="rotas")
-    veiculo = models.ForeignKey(Veiculo, on_delete=models.SET_NULL, null=True, blank=True, related_name="rotas")
-    hora_partida = models.TimeField(default=time(6, 0))
-    hora_chegada = models.TimeField(default=time(7, 0))
+    nome = models.CharField(max_length=255, db_index=True)
+    veiculo = models.ForeignKey(Veiculo, on_delete=models.PROTECT, related_name="rotas")
+    hora_partida = models.TimeField(default=datetime.time(6, 0))
+    hora_chegada = models.TimeField(default=datetime.time(7, 0))
     descricao = models.TextField(blank=True, null=True)
-    ativo = models.BooleanField(default=True)
+    ativo = models.BooleanField(default=True, db_index=True)
     criado_em = models.DateTimeField(auto_now_add=True, null=True)
     atualizado_em = models.DateTimeField(auto_now=True, null=True)
 
     class Meta:
+        verbose_name = 'Rota'
+        verbose_name_plural = 'Rotas'
         ordering = ["nome"]
 
+    def clean(self):
+        super().clean()
+        if self.veiculo and not self.veiculo.motorista:
+            raise models.ValidationError({
+                'veiculo': 'O veículo selecionado não tem um motorista atribuído.'
+            })
 
-    def motorista_atribuido(self):
+    @property
+    def motorista(self):
         """retorna o motorista do veiculo da rota, se houver"""
         return self.veiculo.motorista if self.veiculo else None
 

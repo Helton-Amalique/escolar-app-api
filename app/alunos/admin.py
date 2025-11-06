@@ -39,8 +39,18 @@ class EncarregadoAdmin(admin.ModelAdmin):
     search_fields = ('user__nome', 'user__email', 'nrBI', 'telefone')
     autocomplete_fields = ('user', )
     inlines = [AlunoInline]
-    
-    fildsets = (
+
+    fieldsets = (
         ('Informacao do Usuario', {'fields': ('user',)}),
-        
+        ('Detalhes do Encarregado', {'fields': ('foto', 'telefone', 'nrBI', 'endereco')})
     )
+
+    def get_user_nome(self, obj):
+        return obj.user.nome if obj.user else '-'
+    get_user_nome.short_description = 'Nome do Utilizador'
+    get_user_nome.admin_order_field = 'user__nome'
+
+    def get_email(self, obj):
+        return obj.user.email if obj.user else '-'
+    get_email.short_description = 'Email'
+    get_email.admin_order_field = 'user__email'

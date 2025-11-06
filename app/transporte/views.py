@@ -3,39 +3,49 @@ from rest_framework.permissions import IsAuthenticated
 from transporte.models import Motorista, Veiculo, Rota
 from transporte.serializers import MotoristaSerializer, VeiculoSerializer, RotaSerializer
 
-class MotoristaViewSet(viewsets.ModelViewSet):
-    queryset = Motorista.objects.all()
-    serializer_class = MotoristaSerializer
 
-    permissions_classes = [IsAuthenticated]
+class MotoristaViewSet(viewsets.ModelViewSet):
+    """API para gestão de motoristas"""
+    queryset = Motorista.objects.select_related('user').all()
+    serializer_class = MotoristaSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['ativo']
+    search_fields = ['user__nome', 'user__email', 'telefone', 'carta_nr']
+    ordering_fields = ['criado_em', 'atualizado_em']
 
 
 class VeiculoViewSet(viewsets.ModelViewSet):
-    queryset = Veiculo.objects.all()
+    """API para gestão de veículos"""
+    queryset = Veiculo.objects.select_related('motorista__user').all()
     serializer_class = VeiculoSerializer
-
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['ativo', 'motorista']
+    search_fields = ['matricula', 'modelo', 'marca', 'motorista__user__nome']
+    ordering_fields = ['matricula', 'capacidade', 'criado_em']
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, "perfil_motorista"):
-            # Apenas veiculo do motorista logado
+        if hasattr(user, 'perfil_motorista'):
+            # Apenas veículos do motorista logado
             return Veiculo.objects.filter(motorista=user.perfil_motorista, ativo=True)
-        return Veiculo.objects.all().order_by("placa_matricula")
+        return Veiculo.objects.select_related('motorista__user').all()
 
 
 class RotaViewSet(viewsets.ModelViewSet):
-    queryset = Rota.objects.all()
+    """API para gestão de rotas"""
+    queryset = Rota.objects.select_related('veiculo__motorista__user').prefetch_related('alunos').all()
     serializer_class = RotaSerializer
-
-    permissions_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['ativo', 'veiculo']
+    search_fields = ['nome', 'descricao', 'veiculo__matricula', 'veiculo__modelo']
+    ordering_fields = ['nome', 'criado_em', 'hora_partida']
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, "perfil_motorista"):
-            # Apenas rotas de veivulos do motorista logado
+        if hasattr(user, 'perfil_motorista'):
+            # Apenas rotas de veículos do motorista logado
             return Rota.objects.filter(veiculo__motorista=user.perfil_motorista, ativo=True)
-        return Rota.objects.nome()
+        return Rota.objects.select_related('veiculo__motorista__user').prefetch_related('alunos').all()
 
 
 

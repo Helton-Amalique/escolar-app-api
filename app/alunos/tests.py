@@ -216,6 +216,66 @@ class AlunoAPITestCase(TestCase):
         refresh = RefreshToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
+        # Segundo encarregado e aluno para testes de permissão
+        other_user = User.objects.create_user(
+            email="other@email.com",
+            nome="Outro Encarregado",
+            role="ENCARREGADO",
+            password="senha123",
+        )
+        self.other_encarregado = Encarregado.objects.create(
+            user=other_user,
+            telefone="+258840000000",
+            nrBI="1111111111111A",
+        )
+        self.other_aluno = Aluno.objects.create(
+            nome="Outro Aluno",
+            data_nascimento=date(2015, 1, 1),
+            nrBI="2222222222222B",
+            encarregado=self.other_encarregado,
+            escola_dest="Outra Escola",
+            classe="5",
+        )
+
+    def test_encarregado_nao_pode_listar_alunos_de_outro_encarregado(self):
+        """Garante que um encarregado não pode listar os alunos de outro."""
+        url = f"/api/alunos/encarregados/{self.other_encarregado.id}/alunos/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0) # Deve retornar uma lista vazia
+
+    def test_encarregado_nao_pode_ver_aluno_de_outro_encarregado(self):
+        """Garante que um encarregado não pode ver um aluno de outro."""
+        url = f"/api/alunos/encarregados/{self.other_encarregado.id}/alunos/{self.other_aluno.id}/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_encarregado_nao_pode_atualizar_aluno_de_outro_encarregado(self):
+        """Garante que um encarregado não pode atualizar um aluno de outro."""
+        url = f"/api/alunos/encarregados/{self.other_encarregado.id}/alunos/{self.other_aluno.id}/"
+        payload = {"classe": "6"}
+        response = self.client.patch(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_encarregado_nao_pode_deletar_aluno_de_outro_encarregado(self):
+        """Garante que um encarregado não pode deletar um aluno de outro."""
+        url = f"/api/alunos/encarregados/{self.other_encarregado.id}/alunos/{self.other_aluno.id}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_encarregado_nao_pode_criar_aluno_para_outro_encarregado(self):
+        """Garante que um encarregado não pode criar um aluno para outro encarregado."""
+        url = f"/api/alunos/encarregados/{self.other_encarregado.id}/alunos/"
+        payload = {
+            "nome": "Aluno Intruso",
+            "data_nascimento": "2015-01-01",
+            "nrBI": "3333333333333C",
+            "escola_dest": "Escola de Teste",
+            "classe": "1",
+        }
+        response = self.client.post(url, payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     def test_listar_alunos(self):
         url = f"/api/alunos/encarregados/{self.encarregado.id}/alunos/"
         response =  self.client.get(url)

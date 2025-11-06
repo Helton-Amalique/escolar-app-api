@@ -22,12 +22,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-tj9-ege6_gx(eyz(gwbswun=r%@l^-jq83u-r7bl_@pr8jnbwc'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-tj9-ege6_gx(eyz(gwbswun=r%@l^-jq83u-r7bl_@pr8jnbwc')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'alunos',
-    'financeiro',
+    # 'financeiro',
     'transporte',
     'rest_framework',
     'drf_spectacular',
@@ -133,6 +133,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
@@ -153,10 +156,8 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
 
-    # "DEFAULT_PAGINATION_CLASS": [
-    #     "rest_framework.pagination.CursorPagination",
-    #     "PAGE_SIZE": 10,
-    # ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -165,6 +166,16 @@ REST_FRAMEWORK = {
     ],
 
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    
+    # Otimizações
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+    },
 }
 
 SPECTACULAR_SETTINGS = {
@@ -176,31 +187,31 @@ SPECTACULAR_SETTINGS = {
     # 'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
 }
 
-#configuracao basica para envio via SMTP
-EMAIL_BaCKEND = "django.core.mail.backends.smto.EmailBackend"
-EMAIL_HOST = "smtp.seuProvedor.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "meuemail@dominio.com"
-EMAIL_HOST_PASSWORD = "senha"
+# Configuracao para envio via SMTP
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
-DEFAULT_FROM_EMAIL = "Financeiro <meuemail@dominio.com>"
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Sistema Escolar <noreply@example.com>')
 
 # Celery
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://redis:6379/0"
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
 CELERY_BEAT_SCHEDULE = {}
 
 
-CELERY_BEAT_SCHEDULE = {
-    "enviar-recibos-mensais": {
-        "task": "financeiro.tasks.enviar_recibos_mes",
-        "schedule": crontab(day_of_month=1, hour=0, minute=0)
-        # todos os dias 1, as 08h
-    },
+# CELERY_BEAT_SCHEDULE = {
+#     "enviar-recibos-mensais": {
+#         "task": "financeiro.tasks.enviar_recibos_mes",
+#         "schedule": crontab(day_of_month=1, hour=0, minute=0)
+#         # todos os dias 1, as 08h
+#     },
 
-    "alertas-mensalidades-diarios": {
-        "task": "financeiro.tasks.tarefa_verificar_alertas_mensalidades",
-        "schedule": crontab(hour=8, minute=0), # todos os dias as 08h
-    }
-}
+#     "alertas-mensalidades-diarios": {
+#         "task": "financeiro.tasks.tarefa_verificar_alertas_mensalidades",
+#         "schedule": crontab(hour=8, minute=0), # todos os dias as 08h
+#     }
+# }

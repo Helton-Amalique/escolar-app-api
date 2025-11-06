@@ -15,7 +15,7 @@ class EncarregadoViewSet(viewsets.ModelViewSet):
             return Encarregado.objects.all()
         if hasattr(user, 'perfil_encarregado'):
             return Encarregado.objects.filter(user=user)
-        return Encarregado.objects.none()  # Retorna queryset vazio se não for admin nem encarregado
+        return Encarregado.objects.none()
 
 class AlunoViewSet(viewsets.ModelViewSet):
     queryset = Aluno.objects.all()
@@ -24,20 +24,16 @@ class AlunoViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        encarregado_pk = self.kwargs.get("encarregado_pk")
-
         if user.is_staff:
+            encarregado_pk = self.kwargs.get("encarregado_pk")
             if encarregado_pk:
                 return Aluno.objects.filter(encarregado_id=encarregado_pk)
             return Aluno.objects.all()
-
-        if hasattr(user, 'perfil_encarregado'):
-            encarregado = user.perfil_encarregado
-            if encarregado_pk and str(encarregado.pk) != encarregado_pk:
-                 return Aluno.objects.none()  # Encarregado tentando acessar alunos de outro encarregado
-            return Aluno.objects.filter(encarregado=encarregado)
         
-        return Aluno.objects.none() # Retorna queryset vazio por padrão
+        if hasattr(user, 'perfil_encarregado'):
+            return Aluno.objects.filter(encarregado=user.perfil_encarregado)
+        
+        return Aluno.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user

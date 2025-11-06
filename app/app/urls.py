@@ -34,9 +34,8 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
 
-    path('/api/admin/', admin.site.urls),
-    # path('api/alunos/', include('alunos.urls')),
-    # path('api/transporte/', include('transporte.urls')),
+    path('api/alunos/', include('alunos.urls')),
+    path('api/transporte/', include('transporte.urls')),
     # path('api/financeiro/', include('financeiro.urls')),
 
 ]

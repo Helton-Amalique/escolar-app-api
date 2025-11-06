@@ -26,10 +26,12 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class AlunoSerializer(serializers.ModelSerializer):
+    idade = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Aluno
         fields = (
-            "id", "nome", "data_nascimento", "nrBI",
+            "id", "nome", "foto", "idade", "data_nascimento", "nrBI",
             "escola_dest", "classe", "mensalidade",
             "email", "encarregado", "rota", "activo"
         )
@@ -42,7 +44,7 @@ class EncarregadoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Encarregado
-        fields = ("id", "user", "telefone", "nrBI", "endereco")
+        fields = ("id", "user", "foto", "telefone", "nrBI", "endereco")
 
     def create(self, validated_data):
         user_data = validated_data.pop('user')

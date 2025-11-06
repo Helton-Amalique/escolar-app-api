@@ -1,67 +1,97 @@
-from datetime import time, timedelta, date
+from datetime import date, timedelta
 from django.test import TestCase
-from django.urls import reverse
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import RefreshToken
 from transporte.models import Motorista, Rota, Veiculo
 
-from transporte.serializers import MotoristaSerializer, VeiculoSerializer, RotaSerializer
+User = get_user_model()
 
-User =  get_user_model()
-class MotoristaModelTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create(username="jose", email="jose@hot.com", role="MOTORISTA")
-        self.motorista = Motorista.objects.create(
-            user=self.user,
+
+class MotoristaAPITestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin_user = User.objects.create_superuser(
+            email="admin@admin.com", nome="Admin", password="password"
+        )
+        cls.user = User.objects.create_user(
+            email="motorista@email.com",
             nome="Jose Mucavele",
-            telefone="847469520",
+            role="MOTORISTA",
+            password="password",
+        )
+        cls.motorista = Motorista.objects.create(
+            user=cls.user,
+            telefone="+258847469520",
             endereco="Maputo, Bairro Central",
             carta_nr="124876/7",
-            validade_da_carta=date.today() +timedelta(days=365),
+            validade_da_carta=date.today() + timedelta(days=365),
         )
 
-    def test_motorista_serializer_data(self):
-        serializer = MotoristaSerializer(isinstance=self.motorista)
-        data = serializer.data
+    def setUp(self):
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
-        self.assertEqual(data["nome"], "Jose Mucavele")
-        self.assertEqual(data["telefone"], "845576913")
-        self.assertEqual(data["user_nome"], "Jose")
-        self.assertEqual(data["user_email"], "jose@hot.com")
-        self.assertTrue(data["ativo"])
-
-    def test_motorista_list_api(self):
-        url = reverse("motorista-list")
-        response = self.client.get(url)
+    def test_listar_motoristas(self):
+        response = self.client.get("/api/transporte/motoristas/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0]["nome"], "Jose Mucavele" )
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["user_nome"], "Jose Mucavele")
 
+    def test_detalhe_motorista(self):
+        response = self.client.get(f"/api/transporte/motoristas/{self.motorista.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user_nome"], "Jose Mucavele")
 
-    def test_motorista_str(self):
+    def test_criar_motorista(self):
+        new_user = User.objects.create_user(
+            email="novo@email.com", nome="Novo Motorista", role="MOTORISTA", password="password"
+        )
+        payload = {
+            "user": new_user.id,
+            "telefone": "+258820000000",
+            "carta_nr": "987654/1",
+            "validade_da_carta": (date.today() + timedelta(days=365)).strftime("%Y-%m-%d"),
+        }
+        response = self.client.post("/api/transporte/motoristas/", payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Motorista.objects.count(), 2)
+
+    def test_validade_carta_expirada(self):
+        user = User.objects.create_user(email="test@test.com", nome="test", role="MOTORISTA", password="password")
+        with self.assertRaises(Exception):
+             Motorista.objects.create(
+                user=user,
+                telefone="+258841111111",
+                carta_nr="123",
+                validade_da_carta=date.today() - timedelta(days=1),
+            )
+
+    def test_str_motorista(self):
         self.assertEqual(str(self.motorista), "Jose Mucavele")
 
-    def test_motorista_fields(self):
-        self.assertEqual(self.motorista.nome, "Jose Mucavele")
-        self.assertTrue(isinstance(self.motorista, Motorista))
-        self.assertIsNone(self.motorista.ativo)
 
-    def test_carta_valida(self):
-        self.assertTrue(self.motorista.carta_valida())
-
-        self.motorista.validade_da_carta = date.today() - timedelta(days=1)
-        self.assertFalse(self.motorista.carta_valida())
-
-class VeiculoModelTest(TestCase):
-    def setUp(self):
-        user = User.objects.create(username="Maria", email="maria@hot.com", role="MOTORISTA")
+class VeiculoAPITestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin_user = User.objects.create_superuser(
+            email="admin@admin.com", nome="Admin", password="password"
+        )
+        user = User.objects.create_user(
+            email="motorista@email.com",
+            nome="Maria Joaquim",
+            role="MOTORISTA",
+            password="password",
+        )
         motorista = Motorista.objects.create(
             user=user,
-            nome="maria Joaquim",
-            telefone="844769852",
-            endereco="Matola-A Q2, C201",
+            telefone="+258844769852",
             carta_nr="875469/3",
+            validade_da_carta=date.today() + timedelta(days=365),
         )
-        self.veiculo = Veiculo.objects.create(
+        cls.veiculo = Veiculo.objects.create(
             marca="Toyota",
             modelo="Hiace",
             matricula="ABC-145-MC",
@@ -69,90 +99,73 @@ class VeiculoModelTest(TestCase):
             motorista=motorista,
         )
 
+    def setUp(self):
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
-    def test_veiculo_serializer_data(self):
-        serializer = VeiculoSerializer(isinstance=self.veiculo)
-        data = serializer.data
+    def test_listar_veiculos(self):
+        response = self.client.get("/api/transporte/veiculos/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["motorista_nome"], "Maria Joaquim")
 
-        self.assertEqual(data["marca"], "Toyota")
-        self.assertEqual(data["modelo"], "Hiace")
-        self.assertEqual(data["motorista_nome"], "Maria Joaquim")
-        self.assertEqual(data["vaga_desponiveis"], 22)
-
-
-    def test_veiculo_list_api(self):
-        url = reverse("veiculo-list")
-        response = self.client.get(url)
-        self.assertEqual(response.status.code, status.HTTP_200_OK)
-        self.assertEqual(response.data[0]["marca"], "Toyota")
-
-
-    def test_veiculo_str(self):
-        self.assertEqual(str(self.veiculo), "Hiace - ABC-875-MC")
+    def test_str_veiculo(self):
+        self.assertEqual(str(self.veiculo), "Hiace - ABC-145-MC")
 
     def test_vagas_disponiveis(self):
-        self.assertEqual(self.veiculo.vagas_disponives(ocupados=5),17)
-        self.assertEqual(self.veiculo.vagas_disponives(ocupados=25),0)
+        self.assertEqual(self.veiculo.vagas_disponiveis, 22)
 
-    def test_veiculo_fields(self):
-        self.assertEqual(self.veiculo.marca, "Toyota")
-        self.assertEqual(self.veiculo.capacidade, 22)
-        self.assertTrue(isinstance(self.veiculo, Veiculo))
 
-class RotaModelTest(TestCase):
-    def setUp(self):
-        user = User.objects.create(username="carlos", email="carlos@gmail.com", role="MOTORISTA")
-        self.motorista = Motorista.objects.create(
-            user=user,
-            nome="Carlos Joaquim",
-            telefone="874125697",
-            endereco="Matola-C",
-            carta_nr="54397/9",
+class RotaAPITestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin_user = User.objects.create_superuser(
+            email="admin@admin.com", nome="Admin", password="password"
         )
-        self.veiculo = Veiculo.objects.create(
+        user = User.objects.create_user(
+            email="carlos@email.com",
+            nome="Carlos Joaquim",
+            role="MOTORISTA",
+            password="password",
+        )
+        motorista = Motorista.objects.create(
+            user=user,
+            telefone="+258874125697",
+            carta_nr="54397/9",
+            validade_da_carta=date.today() + timedelta(days=365),
+        )
+        veiculo = Veiculo.objects.create(
             marca="Nissan",
             modelo="Caravan",
             matricula="XYZ-987-MP",
             capacidade=20,
-            motorista=self.motorista,
+            motorista=motorista,
         )
-        self.rota = Rota.objects.create(
+        cls.rota = Rota.objects.create(
             nome="Matola -> Maputo",
-            motorista=self.motorista,
-            veiculo=self.veiculo,
-            hora_partida=time(5, 0),
-            hora_chegada=time(6, 20),
+            veiculo=veiculo,
         )
 
-    def test_rota_serializer_data(self):
-        serializer = VeiculoSerializer(isinstance=self.veiculo)
-        data = serializer.data
+    def setUp(self):
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.admin_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
 
-        self.assertEqual(data["nome"], "Matola -> Maputo")
-        self.assertEqual(data["motorista_nome"], "Carlos Joaquim")
-        self.assertEqual(data["veiculo_nome"], "Caravan")
-        self.assertEqual(data["matricula"], 22)
-
-
-    def test_rota_list_api(self):
-        url = reverse("rota-list")
-        response = self.client.get(url)
-        self.assertEqual(response.status.code, status.HTTP_200_OK)
+    def test_listar_rotas(self):
+        response = self.client.get("/api/transporte/rotas/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["nome"], "Matola -> Maputo")
 
-
-
-    def test_rota_str(self):
-        self.assertEqual(str(self.rota), "Matola -> Maputo")
-
-    def test_rota_relacionadas(self):
-        self.assertEqual(self.rota.motorista.nome, "Carlos Joaquim")
-        self.assertEqual(self.rota.veiculo.marca, "Nissan")
-        self.assertEqual(self.rota.veiculo.modelo, "Caravan")
-        self.assertTrue(isinstance(self.rota, Rota))
+    def test_detalhe_rota(self):
+        response = self.client.get(f"/api/transporte/rotas/{self.rota.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["motorista"]["user_nome"], "Carlos Joaquim")
+        self.assertEqual(response.data["veiculo"]["modelo"], "Caravan")
 
     def test_str_rota(self):
-        self.assertIn("Matola -> Maputo", str(self.rota))
+        self.assertEqual(str(self.rota), "Matola -> Maputo")
 
-    def test_motorista_atributo(self):
-        self.assertEqual(self.rota.motorista_atribuido(), self.motorista)
+    def test_rota_motorista_property(self):
+        self.assertEqual(self.rota.motorista.user.nome, "Carlos Joaquim")

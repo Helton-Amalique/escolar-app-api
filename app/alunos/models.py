@@ -1,5 +1,6 @@
 """Models para base de dados de Alunos"""
 from django.db import models
+from django.db.models import Q
 from django.conf import settings
 from datetime import date
 from decimal import Decimal
@@ -15,11 +16,12 @@ class Encarregado(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        limit_choices_to={'role': 'ENCARREGADO'},
+        limit_choices_to=Q(role__nome='ENCARREGADO'),
         related_name='perfil_encarregado'
     )
+    foto = models.ImageField(upload_to='fotos_encarregados/', blank=True, null=True)
     telefone = PhoneNumberField(region="MZ")
-    nrBI = models.CharField(max_length=30, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
+    nrBI = models.CharField(max_length=30, unique=True, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -34,8 +36,9 @@ class Encarregado(models.Model):
 class Aluno(models.Model):
     """Informações de aluno"""
     nome = models.CharField(max_length=255, db_index=True)
+    foto = models.ImageField(upload_to='fotos_alunos/', blank=True, null=True)
     data_nascimento = models.DateField()
-    nrBI = models.CharField(max_length=30, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
+    nrBI = models.CharField(max_length=30, unique=True, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
     encarregado = models.ForeignKey(
         Encarregado,
         on_delete=models.CASCADE,
@@ -45,7 +48,8 @@ class Aluno(models.Model):
     classe = models.CharField(max_length=25)
     rota = models.ForeignKey(
         'transporte.Rota',
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,  # Impede que a rota seja apagada se houver alunos nela
+        related_name='alunos',
         null=True,
         blank=True
     )
@@ -60,6 +64,7 @@ class Aluno(models.Model):
     email = models.EmailField(
         blank=True,
         null=True,
+        unique=True,
         validators=[validar_email],
         help_text='Email do aluno e (opcional)',
         db_index=True
@@ -87,6 +92,13 @@ class Aluno(models.Model):
             self.email = self.email.lower().strip()
         self.full_clean()
         super().save(*args, **kwargs)
+
+    @property
+    def idade(self):
+        hoje = date.today()
+        return hoje.year - self.data_nascimento.year - (
+            (hoje.month, hoje.day) < (self.data_nascimento.month, self.data_nascimento.day)
+        )
 
     def __str__(self):
         return self.nome
