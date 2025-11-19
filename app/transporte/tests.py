@@ -72,6 +72,19 @@ class MotoristaAPITestCase(TestCase):
     def test_str_motorista(self):
         self.assertEqual(str(self.motorista), "Jose Mucavele")
 
+    def test_usuario_c_nao_pode_criar_motorista(self):
+        client = APIClient
+        refresh = RefreshToken.for_user(self.user)
+        client.credentials(HTTP_auTHORIZATION=f'Bearer {refresh.acess_token}')
+        payload = {
+            "user": self.user.id,
+            "telefone": "+258846666697",
+            "carta_nr": "888888/3",
+            "validade_da_carta": (date.today() + timedelta(days=365)).strftime("%Y-%m-%d")
+        }
+        response = client.post("/api/transport/motoristas/", payload, format='json')
+        self.assertEqual(response.status.code, status.HTTP_403_FORBIDDEN)
+
 
 class VeiculoAPITestCase(TestCase):
     @classmethod
@@ -115,6 +128,16 @@ class VeiculoAPITestCase(TestCase):
 
     def test_vagas_disponiveis(self):
         self.assertEqual(self.veiculo.vagas_disponiveis, 22)
+
+    def test_matricula_invalida(self):
+        with self.assertRaises(Exception):
+            Veiculo.objects.create(
+                marca="Ford",
+                modelo="Transit",
+                matricula="123-INVALID",
+                capacidade="15",
+                motorista=self.veiculo.motorista,
+            )
 
 
 class RotaAPITestCase(TestCase):
@@ -169,3 +192,9 @@ class RotaAPITestCase(TestCase):
 
     def test_rota_motorista_property(self):
         self.assertEqual(self.rota.motorista.user.nome, "Carlos Joaquim")
+
+    def test_rota_sem_motorista_ativo(self):
+        self.rota.veiculo.modelo.ativo = False
+        self.rota.veiculo.matricula.save()
+        with self.assertRaises(Exception):
+            self.rota.clean()

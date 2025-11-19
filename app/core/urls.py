@@ -14,11 +14,3 @@ urlpatterns = [
     path('auth/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('auth/password-reset-confirm/<uid>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]
-
-# urlpatterns = [
-#      path(
-#         "auth/password-reset-confirm/<str:uid>/<str:token>/",
-#         PasswordResetConfirmView.as_view(),
-#         name="password-reset-confirm"
-#     ),
-# ]

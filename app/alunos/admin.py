@@ -7,13 +7,13 @@ class AlunoInline(admin.TabularInline):
     model = Aluno
     extra = 0
     readonly_fields = ("id",)
-    fields = ('nome', 'nrBI', 'data_nascimento', 'escola_dest', 'classe', 'rota', 'activo', 'email', 'mensalidade')
+    fields = ('nome', 'nrBI', 'data_nascimento', 'escola_dest', 'classe', 'rota', 'ativo', 'email', 'mensalidade')
 
 @admin.register(Aluno)
 class AlunoAdmin(BaseAdmin):
-    list_display = ('id', 'nome', 'nrBI', 'data_nascimento', 'get_encarregado', 'escola_dest', 'classe', 'rota', 'activo')
+    list_display = ('id', 'nome', 'nrBI', 'data_nascimento', 'get_encarregado', 'escola_dest', 'classe', 'rota', 'ativo')
     search_fields = ('nome', 'nrBI', 'encarregado__user__nome')
-    list_filter = ("classe", "activo")
+    list_filter = ("classe", "ativo")
     ordering = ("nome",)
     readonly_fields = ("id",)
     autocomplete_fields = ("encarregado", "rota")
@@ -21,7 +21,7 @@ class AlunoAdmin(BaseAdmin):
 
     fieldsets = (
         ('Dados Pessoas', {
-            'fields': ('nome', 'nrBI', 'data_nascimento', 'encarregado', 'escola_dest', 'classe', 'activo', 'email', 'mensalidade')
+            'fields': ('nome', 'nrBI', 'data_nascimento', 'encarregado', 'escola_dest', 'classe', 'ativo', 'email', 'mensalidade')
         }),
         ('Trasporte', {
             'fields': ('rota',)

@@ -13,16 +13,23 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         # Use o manager do user para criar o usuário e hashear a senha
         password = validated_data.pop("password", None)
-        user = self.Meta.model.objects.create_user(**validated_data, password=password)
+        user = User(**validated_data)
+        if password:
+            user.set_password(password)
+        user.save()
+        # user = self.Meta.model.objects.create_user(**validated_data, password=password)
         return user
 
     def update(self, instance, validated_data):
         # Atualiza a senha corretamente se ela for fornecida
         password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
         if password:
             instance.set_password(password)
-        
-        return super().update(instance, validated_data)
+        instance.save()
+        return instance
+        # return super().update(instance, validated_data)
 
 
 class AlunoSerializer(serializers.ModelSerializer):
@@ -33,7 +40,7 @@ class AlunoSerializer(serializers.ModelSerializer):
         fields = (
             "id", "nome", "foto", "idade", "data_nascimento", "nrBI",
             "escola_dest", "classe", "mensalidade",
-            "email", "encarregado", "rota", "activo"
+            "email", "encarregado", "rota", "ativo"
         )
         # O encarregado é definido na view, não deve ser passado no payload
         read_only_fields = ("encarregado",)
@@ -49,19 +56,17 @@ class EncarregadoSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user_data = validated_data.pop('user')
         # Cria o usuário aninhado usando o UserSerializer
-        user = UserSerializer.create(UserSerializer(), validated_data=user_data)
-        # Cria o encarregado e o associa ao usuário
-        encarregado = Encarregado.objects.create(user=user, **validated_data)
-        return encarregado
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        user = user_serializer.save()
+        return Encarregado.objects.create(user=user, **validated_data)
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', None)
-        
+
         # Atualiza os dados do usuário aninhado
         if user_data:
             user_serializer = UserSerializer(instance.user, data=user_data, partial=True)
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
-        
-        # Atualiza os dados do encarregado
         return super().update(instance, validated_data)

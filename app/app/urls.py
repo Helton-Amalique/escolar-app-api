@@ -21,11 +21,6 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
-# urlpatterns = [
-#     path('admin/', admin.site.urls),
-# ]
-
-
 urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs'),
@@ -36,8 +31,7 @@ urlpatterns = [
 
     path('api/alunos/', include('alunos.urls')),
     path('api/transporte/', include('transporte.urls')),
-    # path('api/financeiro/', include('financeiro.urls')),
-
+    path('api/financeiro/', include('financeiro.urls')),
 ]
 
 if settings.DEBUG:

@@ -1,7 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from transporte.models import Motorista, Veiculo, Rota
-from transporte.serializers import MotoristaSerializer, VeiculoSerializer, RotaSerializer
+from transporte.models import Motorista, Veiculo, Rota, Aluno, Encarregado
+from transporte.serializers import MotoristaSerializer, VeiculoSerializer, RotaSerializer, EncarregadoSerializer
+from alunos.serializers import AlunoSerializer
 
 
 class MotoristaViewSet(viewsets.ModelViewSet):
@@ -48,39 +49,20 @@ class RotaViewSet(viewsets.ModelViewSet):
         return Rota.objects.select_related('veiculo__motorista__user').prefetch_related('alunos').all()
 
 
+class AlunoViewSet(viewsets.ModelViewSet):
+    """Api para a gestao de alunos"""
+    queryset = Aluno.objects.select_related('encarregado__user', 'rota__veiculo').all()
+    serializer_class = AlunoSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['ativo', 'classe', 'escola_dest', 'rota']
+    search_fields = ['nome', 'nrBI', 'email', 'encarregado__user__nome']
+    ordering_fields = ['nome', 'data_nascimento', 'criado_em']
 
-
-
-
-
-
-
- # o codigo abaixo e funcional
-# class MotoristaViewSet(viewsets.ModelViewSet):
-#     """API para a gestao de motoristas"""
-#     queryset = Motorista.objects.all()
-#     serializer_class = MotoristaSerializer
-#     Permission_classes = [permissions.IsAuthenticated]
-#     filterset_fields = ["ativo"]
-#     search_fields = ["user_nome", "user__email", "telefone", "carta_nr"]
-
-#     ordering_fields = ["criado_em", "atualizado_em"]
-
-# class VeiculoViewSet(viewsets.ModelViewSet):
-#     """API para gestao de veiculos"""
-#     queryset = Veiculo.objects.select_related("motorista").all()
-#     serializer_class = VeiculoSerializer
-#     Permission_classes = [permissions.IsAuthenticated]
-#     filterser_fields = ["ativo", "modelo_carro", "motorista"]
-#     search_fields = ["placa_matricula", "modelo_carro", "motorista__user__nome"]
-#     ordering_fields = ["placa_matricula", "capacidade"]
-
-
-# class RotaViewSet(viewsets.ModelViewSet):
-#     """API para gestao de rotas"""
-#     queryset = Rota.objects.select_related("veiculo", "veiculo__motorista").all()
-#     serializer_class = RotaSerializer
-#     Permission_classes = [permissions.IsAuthenticated]
-#     filterset_fields = ["ativo", "veiculo"]
-#     search_fields = ["name", "descricao", "veiculo__placa_marticula", "veiculo__modelo_carro"]
-#     ordering_fields = ["nome", "criado_em"]
+class EncarregadoViewSet(viewsets.ModelViewSet):
+    """Api para a gestao de Encarregado"""
+    queryset = Encarregado.objects.select_related('user').prefetch_related('alunos').all()
+    serializer_class = EncarregadoSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['nrBI']
+    search_fields = ['user__nome', 'user__email', 'telefone', 'nrBI']
+    ordering_fields = ['user__nome', "criado_em"]

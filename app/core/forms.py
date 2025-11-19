@@ -8,27 +8,7 @@ class CustomUserCreationForm(UserCreationForm):
     role = forms.ModelChoiceField(queryset=Cargo.objects.all(), required=True)
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('email', 'nome', 'apelido', 'role', 'salario')
-
-
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.fields["email"].required = True
-    #     self.fields["nome"].required = True
-    #     self.fields["apelido"].required = True
-    #     self.fields["role"].required = True
-
-    #     if self.data.get("role") == "ENCARREGADO":
-    #         self.fields["salario"].widget = forms.HiddenInput()
-
-    # def save(self, commit=True):
-    #     user = super().save(commit=False)
-
-    #     if not user.salario and user.role in User.SALARIOS_PADRAO:
-    #         user.salario = User.SALARIOS_PADRAO[user.role]
-    #     if commit:
-    #         user.save()
-    #     return user
+        fields = ('email', 'nome', 'role', 'salario')
 
 
 class CustomUserChangeForm(UserChangeForm):
@@ -38,4 +18,4 @@ class CustomUserChangeForm(UserChangeForm):
 
     class Meta:
         model = User
-        fields = ('email', 'nome', 'apelido','role', 'salario', 'is_active', 'is_staff')
+        fields = ('email', 'nome', 'role', 'salario', 'is_active', 'is_staff')

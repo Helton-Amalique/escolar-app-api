@@ -4,19 +4,17 @@ from datetime import date
 from decimal import Decimal
 from django.db import models
 from django.db.models import Sum
-
 from django.conf import settings
 from django.utils import timezone
-
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 
 from alunos.models import Aluno, Encarregado
-# from transporte.models import Rota, Veiculo
+from transporte.models import Rota, Veiculo
 
 # from financeiro.utils import gerar_calendario_anual, valor_atualizado, total_pago_funcionario, enviar_recibo_email
-from financeiro.tasks import enviar_recibos_individual
-from financeiro.managers import MensalidadeManeger, SalarioManeger
+# from financeiro.tasks import enviar_recibos_individual
+# from financeiro.managers import MensalidadeManeger, SalarioManeger
 
 
 CHOICES = [("PAGO", "Pago"), ("PENDENTE", "Pendente"), ("ATRASADO", "Atrasado"), ("PAGO PARCIAL", "Pago Parcial")]
@@ -40,13 +38,141 @@ class StatusMixin(models.Model):
 
     def atualizar_status(self):
         hoje = date.today()
-        if self.status == "PAGO":
+        if self.status == "PAGO" and not self.data_pagamento:
             if not self.data_pagamento:
-                self.data_pagamento = hoje
+                self.data_pagamento = timezone.now()
         elif hasattr(self, "data_limite") and hoje > self.data_limite:
             self.status = "ATRASADO"
 
+# Manager
+class MensalidadeManager(models.Manager):
+    def atrasadas(self):
+        """Mensalidade vencidas ou com status atrasado"""
+        hoje = date.today()
+        return self.filter(
+            models.Q(status="ATRASADO") | (models.Q(status="PENDENTE") & models.Q(data_vencimento__lt=hoje))
+        )
+    def pagas(self):
+        """Mensalidade pagas"""
+        return self.filter(status="PAGO")
 
+    def pendentes(self):
+        """Mensalidade ainda nao pagas e dentro do prazo"""
+        hoje = date.today()
+        return self.filter(status="PENDENTE", data_vencimento__gte=hoje)
+
+    def parciais(self):
+        """Mensalidades com pagamentos parcial"""
+        return self.filter(status="PAGO PARCIAL")
+
+    def do_aluno(self, aluno):
+        """Mensalidade de um aluno especifico"""
+        return self.filter(aluno=aluno)
+
+    def de_mes(self, ano, mes):
+        """Mensalidade do um determinado mes/ano"""
+        return self.filter(mes_referente__year=ano, mes_referente__month=mes)
+
+    def total_recebido(self):
+        """Soma de todos os pagamentos realizados."""
+        return self.model.objects.filter(pagamento__isnull=False).aggregate(total=Sum("pagamento__valor")["total"]or Decimal("0.00"))
+
+class PagamentoManager(models.Manager):
+    def por_metodo(self, metodo):
+        """Filter pagamento por metodo (DINHEIRO, TRANSFERENCIA, CARTAO)"""
+        return self.filter(metodo_pagamento=metodo)
+
+    def de_periodo(self, inicio, fim):
+        """Pagamento realizados dentro de um intervalo de datas"""
+        return self.filter(data_pagamento__range=(inicio, fim))
+
+    def do_aluno(self, aluno):
+        """Pagamento de um aluno especifico"""
+        return self.filter(mensalidade__aluno=aluno)
+
+    def total_pago(self):
+        """Soma de todos os pagamentos registrados"""
+        return self.aaggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+class FaturaManager(models.Manager):
+    def pagas(self):
+        """Faturas pagas"""
+        return self.filter(status="PAGO")
+
+    def pendentes(self):
+        """Faturas ainda nao pagas e dentro do prazo"""
+        hoje = date.today()
+        return self.filter(status="PENDENTE", data_vencimento__gte=hoje)
+
+    def vencidas(self):
+        """Faturas vencidas (data de vencimento ja passou)"""
+        hoje = date.today()
+        return self.filter(data_vencimento__lt=hoje).exclude(status="PAGO")
+
+    def do_periodo(self, inicio, fim):
+        """Fatura emitidas dentro de um intervalo de datas"""
+        return self.filter(data_emissao__range=(inicio, fim))
+
+    def total_faturado(self):
+        """Soma de todas as faturas emitidas"""
+        return self.aaggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+    def total_recebido(self):
+        """Soma de todas as faturas ja pagos"""
+        return self.filter(status="PAGO").aaggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+class SalarioManeger(models.Manager):
+    def pagos(self):
+        return self.filter(status="PAGO")
+
+    def pendentes(self):
+        return self.filter(status="PENDENTE")
+
+    def do_funcionario(self, funcionanrio):
+        return self.filter(funcionario=funcionario)
+
+    def total_pago(self, funcionario=None):
+        qs = self.filter(status="PAGO")
+        if funcionario:
+            qs = qs.filter(funcionario=funcionario)
+        return qs.aggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+class FaturaManager(models.Manager):
+    def pagas(self):
+        return self.filter(status="PAGO")
+
+    def pendentes(self):
+        hoje = date.today()
+        return self.filter(status="PENDENTE", data_vencimento__gte=hoje)
+
+    def vencidas(self):
+        hoje = date.today()
+        return self.filter(data_vencimento__lt=hoje).exclude(status="PAGO")
+
+    def do_periodo(self, inicio, fim):
+        return self.filter(data_emissao__range=(inicio, fim))
+
+    def total_faturado(self):
+        return self.aggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+    def total_recebido(self):
+        return self.filter(status="PAGO").aggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+
+
+class AlertaManager(models.Manager):
+    def enviados(self):
+        return self.filter(status="ENVIADO")
+
+    def falhos(self):
+        return self.filter(status="FALHA NO ENVIO")
+
+    def pendentes(self):
+        return self.filter(status="PENDENTE")
+
+    def por_tipo(self, tipo):
+        return self.filter(tipo=tipo)
+
+# Models
 class Mensalidade(TimestampMixin, StatusMixin):
     aluno = models.ForeignKey('alunos.Aluno',on_delete=models.CASCADE,related_name='mensalidades')
     valor = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], blank=True, default=0,)
@@ -57,7 +183,7 @@ class Mensalidade(TimestampMixin, StatusMixin):
     obs = models.TextField(blank=True, null=True)
     recibo_gerado = models.BooleanField(default=False)
 
-    objects = MensalidadeManeger()
+    objects = MensalidadeManager()
 
     class Meta:
         unique_together = ("aluno", "mes_referente")
@@ -82,8 +208,8 @@ class Mensalidade(TimestampMixin, StatusMixin):
             return
 
         new_status = "PENDENTE"
-
         total_pago = self.total_pago
+
         if total_pago >= self.valor_atualizado:
             new_status = "PAGO"
         elif total_pago > 0:
@@ -101,7 +227,6 @@ class Mensalidade(TimestampMixin, StatusMixin):
 
     def preencher_datas(self, ano: int, mes: int):
        """chama services gerar_calendario_anual pata preencher datas"""
-       pass
 
     @property
     def dias_atraso(self):
@@ -112,17 +237,20 @@ class Mensalidade(TimestampMixin, StatusMixin):
     @property
     def valor_atualizado(self):
         """valor atualizado com a multa (pucha do service)"""
+        if self.status == "ATRASADO":
+            dias = self.dias_atraso
+            periodos = dias // 5
+            multa = self.valor * (self.taxa_atraso * periodos)
+            return self.valor + multa
         return self.valor
 
     def clean(self):
+        super().clean()
         if self.data_limite < self.data_vencimento:
             raise ValidationError("a data limite nao pode ser anterior a data de pagamento")
 
     def __str__(self):
-        try:
-            aluno_nome = self.aluno.nome
-        except Exception:
-            aluno_nome = "Novo Aluno"
+        aluno_nome = getattr(self.aluno, "nome", "Novo Aluno")
         return f"{aluno_nome} - {self.valor:.2f} ({self.status})"
 
 
@@ -134,8 +262,15 @@ class Pagamento(TimestampMixin):
     metodo_pagamento = models.CharField(max_length=20, choices=M_PAGAMENTO, default="DINHEIRO")
     observacao = models.TextField(blank=True, null=True)
 
+    objects = PagamentoManager()
+
     class Meta:
         ordering = ['-data_pagamento']
+
+    def clean(self):
+        super().clean()
+        if self.valor > self.mensalidade.valor_devido:
+            raise ValidationError("Valor do pagamento excede o valor devido")
 
     def __str__(self):
         return f"Pagamento de {self.valor} para {self.mensalidade.aluno.nome} em {self.data_pagamento.strftime('%d/%m/%Y')}"
@@ -162,13 +297,14 @@ class Salario(TimestampMixin, StatusMixin):
         verbose_name_plural = "Salarios"
 
     @classmethod
-    def total_pago_funcionarios(cls, funcion):
+    def total_pago_funcionarios(cls, funcionario):
         """Total de salarios ja pagos a um funcionario"""
-        return cls.objects.filter(funcionario=funcion, status="PAGO").aggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+        # return cls.objects.filter(funcionario=funcion, status="PAGO").aggregate(total=Sum("valor"))["total"] or Decimal("0.00")
+        return cls.objects.total_pago(funcionario)
 
     @classmethod
     def salario_pendente(cls, funcion=None):
-        quant = cls.objects.filter(status="PENDENTE")
+        qs = cls.objects.pendentes()
         # return quant.filter(funcionario=funcion) if funcion else quant
         if funcion:
             quant = quant.filter(funcionario=funcion)
@@ -185,6 +321,8 @@ class Salario(TimestampMixin, StatusMixin):
         """Validacoes antes de salvar"""
         if self.data_pagamento and self.data_pagamento > date.today():
             raise ValidationError("Data de pagamento nao pode ser no futuro.")
+        if self.valor < 0:
+            raise ValidationError("O valor do salario nao pode ser negativo")
 
     def save(self, *args, **kwargs):
         status_ant = None
@@ -193,12 +331,11 @@ class Salario(TimestampMixin, StatusMixin):
 
         super().save(*args, **kwargs)
 
-        if self.status == "PAGO" and self.recibo_gerado is False:
-            if status_ant != "PAGO":
-                self.gerar_recibo_automatico()
+        if self.status == "PAGO" and not self.recibo_gerado and self.recibo_gerado != "PAGO":
+            self.gerar_recibo_automatico()
 
     def __str__(self):
-        nome_func = getattr(self.funcionario), "nome", str(self.funcionario)
+        nome_func = getattr(self.funcionario, "nome", str(self.funcionario))
         return f'{nome_func} - {self.valor:.2f} ({self.mes_referente:%m/%Y}) - {self.status}'
 
 
@@ -262,7 +399,7 @@ class AlertaEnviado(TimestampMixin, models.Model):
 
     encarregado = models.ForeignKey(Encarregado,on_delete=models.CASCADE,related_name='alerta_enviados')
     alunos = models.ManyToManyField(Aluno,related_name="alerta_enviados")
-    tipo= models.CharField(max_length=20, choices=TIPO_CHOICES, default="OUTRO")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="OUTRO")
     email = models.EmailField(help_text="Email usado no envio")
     mensagem = models.TextField()
     enviado_em = models.DateTimeField(auto_now_add=True)

@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterField(
             model_name='aluno',
-            name='activo',
+            name='ativo',
             field=models.BooleanField(db_index=True, default=True),
         ),
         migrations.AlterField(

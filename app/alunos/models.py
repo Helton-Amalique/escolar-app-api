@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.conf import settings
 from datetime import date
 from decimal import Decimal
+from django.utils import timezone
 from django.core.validators import MinValueValidator, EmailValidator, ValidationError
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -22,15 +23,18 @@ class Encarregado(models.Model):
     foto = models.ImageField(upload_to='fotos_encarregados/', blank=True, null=True)
     telefone = PhoneNumberField(region="MZ")
     nrBI = models.CharField(max_length=30, unique=True, blank=False, null=False, help_text="introduza o numero de bilhere de identidade")
+    endereco = models.TextField(blank=True, null=True, help_text="bairro, Q, N da casa")
+    ativo = models.BooleanField(default=True, db_index=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+
+    def __str__(self):
+        return getattr(self.user, "nome", str(self.user))
 
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
-    endereco = models.TextField(blank=True, null=True, help_text="bairro, Q, N da casa")
-
-    def __str__(self):
-        return getattr(self.user, "nome", str(self.user))
 
 
 class Aluno(models.Model):
@@ -54,7 +58,7 @@ class Aluno(models.Model):
         blank=True
     )
 
-    activo = models.BooleanField(default=True, db_index=True)
+    ativo = models.BooleanField(default=True, db_index=True)
     mensalidade = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -69,6 +73,9 @@ class Aluno(models.Model):
         help_text='Email do aluno e (opcional)',
         db_index=True
     )
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
 
     def clean(self):
         hoje = date.today()

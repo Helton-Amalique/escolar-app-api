@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from transporte.models import Veiculo, Motorista, Rota
+from transporte.models import Veiculo, Motorista, Rota, Aluno, Encarregado
 
 
 class MotoristaSerializer(serializers.ModelSerializer):
@@ -41,10 +41,11 @@ class VeiculoSerializer(serializers.ModelSerializer):
 
 class RotaSerializer(serializers.ModelSerializer):
     # Campos read-only aninhados para leitura
+    # motorista = serializers.SerializerMethodField(read_only=True)
     motorista_detalhes = serializers.SerializerMethodField(read_only=True)
     veiculo_detalhes = serializers.SerializerMethodField(read_only=True)
     total_alunos = serializers.IntegerField(source='alunos.count', read_only=True)
-    
+
     # Campo write-only para criação/edição
     veiculo_id = serializers.PrimaryKeyRelatedField(
         queryset=Veiculo.objects.all(),
@@ -67,7 +68,8 @@ class RotaSerializer(serializers.ModelSerializer):
         if obj.motorista:
             return {
                 'id': obj.motorista.id,
-                'nome': obj.motorista.user.nome,
+                'user_nome': obj.motorista.user.nome,
+                'user_email': obj.motorista.user.email,
                 'telefone': str(obj.motorista.telefone)
             }
         return None
@@ -83,6 +85,9 @@ class RotaSerializer(serializers.ModelSerializer):
             }
         return None
 
+    def get_total_alunos(self, obj):
+        return obj.alunos.count()
+
     def validate(self, data):
         veiculo = data.get('veiculo')
         if veiculo and not veiculo.motorista:
@@ -94,3 +99,48 @@ class RotaSerializer(serializers.ModelSerializer):
                 {'veiculo': 'Não é possível criar rota com veículo inativo.'}
             )
         return data
+
+
+class EncarregadoSerializer(serializers.ModelSerializer):
+    user_nome = serializers.CharField(source='user.nome', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_role = serializers.CharField(source='user.role.nome', read_only=True)
+
+    alunos = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Encarregado
+        fields = ['id', 'user', 'user_nome', 'user_email', 'user_role', 'telefone', 'nrBI', 'endereco', 'foto', 'alunos', 'criado_em', 'atualizado_em']
+        read_only_fields = ['alunos', 'criado_em', 'atualizado_em']
+
+        def get_alunos(self, obj):
+            return [
+                {
+                    'id':aluno.id,
+                    'nome':aluno.nome,
+                    'classe':aluno.classe,
+                    'escola_dest':aluno.escola_dest,
+                    'ativo':aluno.ativo,
+                }
+                for aluno in obj.alunos.all()
+            ]
+
+    class AlunoSerializer(serializers.ModelSerializer):
+        idade = serializers.IntegerField(read_only=True)
+        encarregado_nome = serializers.CharField(source='encarregado.user.nome', read_only=True)
+        rota_detalhes = serializers.SerializerMethodField(read_only=True)
+
+        class Meta:
+            model = Aluno
+            fields = ['id ', 'nome', 'foto', 'data_nascimento', 'idade', 'nrBI', 'encarregado', 'encarregado_nome', 'escola_dest', 'classe', 'rota', 'rota_detalhes', 'ativo', 'email', 'criado_em', 'atualizado_em']
+            read_only_fields = ['idade', 'criado_em', 'atualizado_em']
+
+            def get_rota_detalhes(self, obj):
+                if obj.rota.id:
+                    return {
+                        'id':obj.rota.id,
+                        'nome':obj.rota.nome,
+                        'veiculo':f"{obj.rota.veiculo.modelo} - {obj.rota.veiculo.matricula}" if obj.rota.veiculo else None,
+                        'motorista':obj.rota.motorista.user.nome if obj.rota.motorista else None
+                    }
+                return None

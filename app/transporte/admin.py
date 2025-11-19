@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from transporte.models import Motorista, Veiculo, Rota
+from transporte.models import Motorista, Veiculo, Rota, Aluno, Encarregado
 from core.admin_mixins.mixins import BaseAdmin
 from datetime import date
 
@@ -14,7 +14,7 @@ class MotoristaAdmin(admin.ModelAdmin):
     date_hierarchy = "criado_em"
     list_per_page = 25
     ordering = ("-criado_em",)
-    
+
     fieldsets = (
         ('Informações do Usuário', {
             'fields': ('user',)
@@ -39,26 +39,26 @@ class MotoristaAdmin(admin.ModelAdmin):
         return obj.user.email if obj.user else '-'
     get_email.short_description = 'Email'
     get_email.admin_order_field = 'user__email'
-    
+
     def validade_carta_status(self, obj):
         if obj.validade_da_carta < date.today():
             return format_html('<span style="color: red;">⚠️ Expirada</span>')
         return format_html('<span style="color: green;">✓ Válida</span>')
     validade_carta_status.short_description = 'Status Carta'
-    
+
     def ativo_badge(self, obj):
         if obj.ativo:
             return format_html('<span style="color: green;">✓ Ativo</span>')
         return format_html('<span style="color: red;">✗ Inativo</span>')
     ativo_badge.short_description = 'Status'
-    
+
     actions = ['ativar_motoristas', 'desativar_motoristas']
-    
+
     def ativar_motoristas(self, request, queryset):
         count = queryset.update(ativo=True)
         self.message_user(request, f'{count} motorista(s) ativado(s) com sucesso.')
     ativar_motoristas.short_description = 'Ativar motoristas selecionados'
-    
+
     def desativar_motoristas(self, request, queryset):
         count = queryset.update(ativo=False)
         self.message_user(request, f'{count} motorista(s) desativado(s) com sucesso.')
@@ -71,10 +71,11 @@ class VeiculoAdmin(admin.ModelAdmin):
     list_filter = ("ativo", "motorista", "criado_em")
     search_fields = ("matricula", "modelo", "marca", "motorista__user__nome")
     readonly_fields = ("vagas_disponiveis", "criado_em", "atualizado_em")
+    autocomplete_fields = ("motorista",)
     date_hierarchy = "criado_em"
     list_per_page = 25
     ordering = ("matricula",)
-    
+
     fieldsets = (
         ('Informações do Veículo', {
             'fields': ('marca', 'modelo', 'matricula', 'capacidade')
@@ -93,24 +94,31 @@ class VeiculoAdmin(admin.ModelAdmin):
         return format_html('<span style="color: orange;">Sem motorista</span>')
     get_motorista.short_description = 'Motorista'
     get_motorista.admin_order_field = 'motorista__user__nome'
-    
+
     def ativo_badge(self, obj):
         if obj.ativo:
             return format_html('<span style="color: green;">✓ Ativo</span>')
         return format_html('<span style="color: red;">✗ Inativo</span>')
     ativo_badge.short_description = 'Status'
-    
+
     actions = ['ativar_veiculos', 'desativar_veiculos']
-    
+
     def ativar_veiculos(self, request, queryset):
         count = queryset.update(ativo=True)
         self.message_user(request, f'{count} veículo(s) ativado(s) com sucesso.')
     ativar_veiculos.short_description = 'Ativar veículos selecionados'
-    
+
     def desativar_veiculos(self, request, queryset):
         count = queryset.update(ativo=False)
         self.message_user(request, f'{count} veículo(s) desativado(s) com sucesso.')
     desativar_veiculos.short_description = 'Desativar veículos selecionados'
+
+
+class AlunoInline(admin.TabularInline):
+    model = Aluno
+    extra = 0
+    fields = ("nome", "classe", "escola_dest", "ativo")
+    readonly_fields = ("nome", "classe", "escola_dest")
 
 
 @admin.register(Rota)
@@ -119,10 +127,12 @@ class RotaAdmin(BaseAdmin):
     list_filter = ("ativo", "veiculo", "criado_em")
     search_fields = ("nome", "descricao", "veiculo__matricula", "veiculo__modelo")
     readonly_fields = ("total_alunos", "get_motorista", "criado_em", "atualizado_em")
+    autocomplete_fields = ("veiculo",)
+    inlines = [AlunoInline]
     date_hierarchy = "criado_em"
     list_per_page = 25
     ordering = ("nome",)
-    
+
     fieldsets = (
         ('Informações da Rota', {
             'fields': ('nome', 'descricao')
@@ -148,7 +158,7 @@ class RotaAdmin(BaseAdmin):
             return obj.motorista.user.nome
         return '-'
     get_motorista.short_description = 'Motorista'
-    
+
     def total_alunos(self, obj):
         count = obj.alunos.count()
         capacidade = obj.veiculo.capacidade if obj.veiculo else 0
@@ -156,21 +166,29 @@ class RotaAdmin(BaseAdmin):
             return format_html('<span style="color: red;">{} / {} ⚠️ Acima da capacidade</span>', count, capacidade)
         return format_html('<span style="color: green;">{} / {}</span>', count, capacidade)
     total_alunos.short_description = 'Alunos (Ocupação)'
-    
+
     def ativo_badge(self, obj):
         if obj.ativo:
             return format_html('<span style="color: green;">✓ Ativa</span>')
         return format_html('<span style="color: red;">✗ Inativa</span>')
     ativo_badge.short_description = 'Status'
-    
+
     actions = ['ativar_rotas', 'desativar_rotas']
-    
+
     def ativar_rotas(self, request, queryset):
         count = queryset.update(ativo=True)
         self.message_user(request, f'{count} rota(s) ativada(s) com sucesso.')
     ativar_rotas.short_description = 'Ativar rotas selecionadas'
-    
+
     def desativar_rotas(self, request, queryset):
         count = queryset.update(ativo=False)
         self.message_user(request, f'{count} rota(s) desativada(s) com sucesso.')
     desativar_rotas.short_description = 'Desativar rotas selecionadas'
+
+
+@admin.register(Encarregado)
+class EncarregadoAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "telefone", "nrBI", "endereco")
+    search_fields = ("user__nome", "telefone", "nrBI")
+    ordering = ("user",)
+    inlines = [AlunoInline]

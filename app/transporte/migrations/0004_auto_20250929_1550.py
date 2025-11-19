@@ -15,32 +15,32 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='motorista',
             name='atualizado_em',
-            field=models.DateTimeField(auto_now=True, null=True),
+            field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
             model_name='motorista',
             name='criado_em',
-            field=models.DateTimeField(auto_now_add=True, null=True),
+            field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.AddField(
             model_name='rota',
             name='atualizado_em',
-            field=models.DateTimeField(auto_now=True, null=True),
+            field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
             model_name='rota',
             name='criado_em',
-            field=models.DateTimeField(auto_now_add=True, null=True),
+            field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.AddField(
             model_name='veiculo',
             name='atualizado_em',
-            field=models.DateTimeField(auto_now=True, null=True),
+            field=models.DateTimeField(auto_now=True),
         ),
         migrations.AddField(
             model_name='veiculo',
             name='criado_em',
-            field=models.DateTimeField(auto_now_add=True, null=True),
+            field=models.DateTimeField(auto_now_add=True),
         ),
         migrations.AlterField(
             model_name='rota',

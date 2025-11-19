@@ -17,11 +17,11 @@ class UserAdmin(BaseUserAdmin):
     add_form = CustomUserCreationForm
     model= User
 
-    list_display = ('email', 'nome', 'apelido', 'role', 'is_staff', 'is_active')
+    list_display = ('email', 'nome', 'role', 'is_staff', 'is_active')
     list_filter = ('role', 'is_active', 'is_staff')
 
 
-    search_fields = ('email', 'nome', 'apelido')
+    search_fields = ('email', 'nome')
     ordering = ('email',)
     readonly_fields = ('data_criacao', 'data_atualizacao', 'last_login')
 
@@ -30,7 +30,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'password')
         }),
         ('Informações Pessoais', {
-            'fields': ('nome', 'apelido', 'role', 'salario')
+            'fields': ('nome', 'role', 'salario')
         }),
         ('Permissões', {
             'fields': ('is_staff', 'is_superuser', 'is_active', 'groups', 'user_permissions')
@@ -43,7 +43,7 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'nome', 'apelido', 'role', 'salario', 'password1', 'password2', 'is_staff', 'is_active')
+            'fields': ('email', 'nome', 'role', 'salario', 'password1', 'password2', 'is_staff', 'is_active')
         }),
     )
 

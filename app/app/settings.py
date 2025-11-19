@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'alunos',
-    # 'financeiro',
+    'financeiro',
     'transporte',
     'rest_framework',
     'drf_spectacular',
@@ -166,7 +166,7 @@ REST_FRAMEWORK = {
     ],
 
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    
+
     # Otimizações
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
