@@ -1,5 +1,7 @@
 # financeiro/views.py
+from rest_framework.decorators import action
 from rest_framework import viewsets, permissions, decorators, response
+from financeiro.tasks import enviar_alerta_email
 from financeiro.models import Mensalidade, Pagamento, Salario, Fatura, AlertaEnviado
 from financeiro.serializers import (
     MensalidadeSerializer,
@@ -101,6 +103,68 @@ class AlertaEnviadoViewSet(viewsets.ModelViewSet):
     def pendentes(self, request):
         qs = AlertaEnviado.objects.pendentes()
         return response.Response(AlertaEnviadoSerializer(qs, many=True).data)
+
+    @decorators.action(detail=False, methods=["post"])
+    def reprocessar(self, request):
+        falhos = AlertaEnviado.objects.filter(status="FALHO NO ENVIO")
+        reprocessados = []
+        for alerta in falhos:
+            enviar_alerta_email.delay(alerta.pk)
+            reprocessados.append(alerta.pk)
+        return response.Response({"mensagem": f"{len(reprocessados)} alertas reprocessados", "ids": reprocessados})
+
+
+class FinceiroResumoViewSet(viewsets.ViewSet):
+    Permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=["get"])
+    def resumo(self, request):
+        # total de mensalidades
+        total_mensalidade = Mensalidade.objects.count()
+        total_mensalidade_pagas = Mensalidade.objects.pagas().count()
+        total_mensalidade_pendentes = Mensalidade.objects.pendentes().count()
+        total_mensalidade_atrasadas = Mensalidade.objects.atrasadas().count()
+
+        # Totais de pagamentos
+        total_pagamento = Pagamento.objects.count()
+        valor_recebido = sum(p.valor for p in Pagamento.objects.all())
+
+        # Totais de salarios
+        total_salarios = Salario.objects.count()
+        salarios_pagos = Salario.objects.pagos().count()
+        salarios_pendentes = Salario.objects.pendentes().count()
+
+        # Totais de faturas
+        total_faturas = Fatura.objects.count()
+        faturas_pagas = Fatura.objects.pagas.count()
+        fatutas_vencidas = Fatura.objects.vencidas().count()
+
+        return Response({
+            "mensalidade":{
+                "total": total_mensalidade,
+                "pagas": total_mensalidade_pagas,
+                "pendentes": total_mensalidade_pendentes,
+                "atrasadas": total_mensalidade_atrasadas,
+            },
+            "pagamento": {
+                "total": total_pagamento,
+                "valor_recebido": valor_recebido,
+            },
+            "salarios": {
+                "total": total_salarios,
+                "pagos": salarios_pagos,
+                "pendentes": salarios_pendentes,
+            },
+            "fatura": {
+                "total": total_faturas,
+                "pagas": faturas_pagas,
+                "vencidas": fatutas_vencidas,
+            }
+        })
+
+
+
+
 
 
 

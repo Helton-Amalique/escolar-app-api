@@ -8,17 +8,17 @@ from django.contrib.auth import get_user_model
 from fincanceiro.tasks import enviar_alerta_email
 from financeiro.models import Mensalidade, Pagamento, Salario, Fatura, AlertaEnviado
 
-
 User = get_user_model
+
 
 class FinanceiroSignalsTasksTest(TestCase):
     def setUp(self):
-        #Criar usuario funcionario
+        # Criar usuario funcionario
         self.funcionario = User.objects.create_user(
             username="func1", email="func1@test.com", role="FUNCIONARIO", password="123"
         )
 
-        #criar encarregado e aluno
+        # criar encarregado e aluno
         self.encarregado = Encarregado.objects.create(user=User.objects.create_user(
             username="enca1", email="enca1@test.com", password="123"
         ))
@@ -66,7 +66,7 @@ class FinanceiroSignalsTasksTest(TestCase):
             data_vencimento=date.today(),
             data_limite=date.today(),
         )
-        #Forcar status atrasado
+        # Forcar status atrasado
         mensalidade.status = "ATRASADO"
         mensalidade.save()
         alerta = AlertaEnviado.objects.last()

@@ -3,9 +3,10 @@ from django.core.mail import send_mail
 from django.conf import settings
 from financeiro.models import AlertaEnviado
 
+
 @shared_task
 def enviar_alerta_email(alerta_id):
-    """Tasks assincrona para enviar email de alerta.
+    """Task assincrona para enviar email de alerta.
     Recebo o ID do alerta e dispara o email para o encarregado"""
 
     try:
@@ -15,7 +16,7 @@ def enviar_alerta_email(alerta_id):
 
     assunto = f"Alerta de {alerta.get_tipo_display()}"
     mensagem = alerta.mensagem
-    destinatario = alerta. email
+    destinatario = alerta.email
 
     if destinatario:
         try:
@@ -28,7 +29,7 @@ def enviar_alerta_email(alerta_id):
             )
             alerta.status = "ENVIADO"
             alerta.save(update_fields=["status"])
-            return f"alerta enviado para {destinatario}"
+            return f"Alerta enviado para {destinatario}"
         except Exception as e:
             alerta.status = "FALHA NO ENVIO"
             alerta.save(update_fields=["status"])

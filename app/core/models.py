@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
+
 class Cargo(models.Model):
     """Modelo para armazenar cargo e seus salarios padrao"""
     nome = models.CharField(max_length=50, unique=True)
@@ -12,13 +13,14 @@ class Cargo(models.Model):
 
     def clean(self):
         super().clean()
-        # if not self.role:
-            # raise ValidationError("O ususario deve ter papel (role) definido")
         if self.salario_padrao is not None and self.salario_padrao < Decimal('0.00'):
             raise ValidationError({"Salario": "salario nao pode ser negativo"})
+        # if not self.role:
+        # raise ValidationError("O ususario deve ter papel (role) definido")
 
     def __str__(self):
         return self.nome
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, nome, role=None, password=None, **extra_fields):
@@ -96,7 +98,6 @@ class User(AbstractUser):
             original_role = User.objects.filter(pk=self.pk).values_list("role_id", flat=True).first()
             if original_role != self.role_id:
                 raise ValidationError({"role": "Nao e permitido alterar o cargo do usuario."})
-
 
         # Normaliza email
         if self.email:

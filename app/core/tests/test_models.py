@@ -5,8 +5,8 @@ from decimal import Decimal
 # from django.core.exceptions import ValidationError
 # from core.models import Cargo, User
 
-
 User = get_user_model()
+
 
 class UserModelTestCase(TestCase):
     # def setUp(self):
@@ -72,7 +72,6 @@ class UserModelTestCase(TestCase):
     #     cargo = Cargo(nome="NEGATIVO", salario_padrao=Decimal("-100.00"))
     #     with pytest.Raises(ValidationError):
     #         cargo.clean()
-
 
     def test_cria_usuario(self):
         user = User.objects.create_user(

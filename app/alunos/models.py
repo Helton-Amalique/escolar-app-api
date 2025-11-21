@@ -47,6 +47,8 @@ class Aluno(models.Model):
         Encarregado,
         on_delete=models.CASCADE,
         related_name='alunos',
+        null=True,
+        blank=True
     )
     escola_dest = models.CharField(max_length=255)
     classe = models.CharField(max_length=25)

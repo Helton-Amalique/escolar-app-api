@@ -6,16 +6,12 @@ from django.db import models
 from django.db.models import Sum
 from django.conf import settings
 from django.utils import timezone
+from transporte.models import Rota, Veiculo
+from alunos.models import Aluno, Encarregado
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-
-from alunos.models import Aluno, Encarregado
-from transporte.models import Rota, Veiculo
-
-# from financeiro.utils import gerar_calendario_anual, valor_atualizado, total_pago_funcionario, enviar_recibo_email
 # from financeiro.tasks import enviar_recibos_individual
-# from financeiro.managers import MensalidadeManeger, SalarioManeger
-
+# from financeiro.tasks import enviar_alerta_email
 
 CHOICES = [("PAGO", "Pago"), ("PENDENTE", "Pendente"), ("ATRASADO", "Atrasado"), ("PAGO PARCIAL", "Pago Parcial")]
 M_PAGAMENTO = [ ("DINHEIRO", "Dinheiro"), ("TRANSFERENCIA", "Transferência"), ("CARTAO", "Cartão"),]
@@ -29,10 +25,8 @@ class TimestampMixin(models.Model):
 
 
 class StatusMixin(models.Model):
-
     status = models.CharField(max_length=20, choices=CHOICES,default="PENDENTE")
     data_pagamento = models.DateTimeField(null=True, blank=True)
-
     class Meta:
         abstract = True
 
@@ -76,6 +70,7 @@ class MensalidadeManager(models.Manager):
     def total_recebido(self):
         """Soma de todos os pagamentos realizados."""
         return self.model.objects.filter(pagamento__isnull=False).aggregate(total=Sum("pagamento__valor")["total"]or Decimal("0.00"))
+
 
 class PagamentoManager(models.Manager):
     def por_metodo(self, metodo):
@@ -201,22 +196,17 @@ class Mensalidade(TimestampMixin, StatusMixin):
         return self.valor_atualizado - self.total_pago
 
     def atualizar_status(self):
-        """
-        Calcula e atualiza o status da mensalidade com base nos pagamentos e datas.
-        """
+        """ Calcula e atualiza o status da mensalidade com base nos pagamentos e datas."""
         if not self.pk:
             return
-
         new_status = "PENDENTE"
         total_pago = self.total_pago
-
         if total_pago >= self.valor_atualizado:
             new_status = "PAGO"
         elif total_pago > 0:
             new_status = "PAGO PARCIAL"
         elif date.today() > self.data_vencimento:
             new_status = "ATRASADO"
-
         if self.status != new_status:
             self.status = new_status
             fields_to_update = ['status']
@@ -315,7 +305,7 @@ class Salario(TimestampMixin, StatusMixin):
         if not self.recibo_gerado and self.status == "PAGO":
             self.recibo_gerado = True
             self.save(update_fields=["recibo_gereado"])
-            enviar_recibos_individual.delay("salario", self.pk)
+            enviar_alerta_email.delay("salario", self.pk)
 
     def clean(self):
         """Validacoes antes de salvar"""
@@ -358,7 +348,7 @@ class Fatura(StatusMixin):
         if not self.recibo_gerado and self.status =="PAGO" and self.email_destinatario:
             self.recibo_gerado = True
             self.save(update_fields=["recibo_gerado"])
-            enviar_recibos_individual.delay("fatura", self.pk)
+            enviar_alerta_email.delay("fatura", self.pk)
 
     def clean(self):
         if self.data_emissao > date.today():
@@ -385,25 +375,27 @@ class Fatura(StatusMixin):
 class AlertaEnviado(TimestampMixin, models.Model):
     """Alerta enviados para os encarregados"""
     TIPO_CHOICES = [
-        ("ATRASO","Pagamento em atraso"),
-        ("INICIO","Inicio do periodo de pagamento"),
-        ("PENDENTE","pagamento pendente"),
-        ("OUTRO","Outro"),
+        ("ATRASO", "Pagamento em atraso"),
+        ("INICIO", "Inicio do periodo de pagamento"),
+        ("PENDENTE", "pagamento pendente"),
+        ("OUTRO", "Outro"),
     ]
 
     STATUS_CHOICES = [
-        ("ENVIADO","Enviado"),
-        ("FALHA NO ENVIO","Falha no envio"),
-        ("PENDENTE","Pendente")
+        ("ENVIADO", "Enviado"),
+        ("FALHA NO ENVIO", "Falha no envio"),
+        ("PENDENTE", "Pendente")
     ]
 
-    encarregado = models.ForeignKey(Encarregado,on_delete=models.CASCADE,related_name='alerta_enviados')
-    alunos = models.ManyToManyField(Aluno,related_name="alerta_enviados")
+    encarregado = models.ForeignKey(Encarregado,on_delete=models.CASCADE, related_name='alerta_enviados')
+    alunos = models.ManyToManyField(Aluno, related_name="alerta_enviados")
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default="OUTRO")
     email = models.EmailField(help_text="Email usado no envio")
     mensagem = models.TextField()
     enviado_em = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=50,choices=STATUS_CHOICES, default="ENVIADO")
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="ENVIADO")
+
+    objects = AlertaManager()
 
     class Meta:
         ordering = ["-enviado_em"]

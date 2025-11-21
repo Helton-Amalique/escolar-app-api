@@ -6,6 +6,7 @@ from financeiro.views import (
     SalarioViewSet,
     FaturaViewSet,
     AlertaEnviadoViewSet,
+    # FinceiroResumoViewSet,
 )
 
 router = DefaultRouter()
@@ -14,7 +15,7 @@ router.register(r"pagamentos", PagamentoViewSet)
 router.register(r"salarios", SalarioViewSet)
 router.register(r"faturas", FaturaViewSet)
 router.register(r"alertas", AlertaEnviadoViewSet)
-
+# router.register(r"resumo", FinceiroResumoViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

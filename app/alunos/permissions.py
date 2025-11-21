@@ -17,5 +17,4 @@ class IsAdminOrOwner(permissions.BasePermission):
             return obj.user == request.user
         if hasattr(obj, 'encarregado'):
             return obj.encarregado.user == request.user
-            
         return False

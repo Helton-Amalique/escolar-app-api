@@ -45,6 +45,7 @@ class UserDetailsView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAdminUser]
     lookup_field = 'id'
 
+
 class PasswordResetRequestView(generics.GenericAPIView):
     serializer_class = PasswordResetRequestSerializer
     permission_classes = [permissions.AllowAny]

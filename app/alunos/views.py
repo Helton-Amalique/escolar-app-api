@@ -20,6 +20,7 @@ class EncarregadoViewSet(viewsets.ModelViewSet):
             # return Encarregado.objects.filter(user=user)
         return Encarregado.objects.none()
 
+
 class AlunoViewSet(viewsets.ModelViewSet):
     queryset = Aluno.objects.select_related('encarregado__user', 'rota__veiculo').all()
     serializer_class = AlunoSerializer

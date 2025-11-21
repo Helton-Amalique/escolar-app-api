@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
 
+
 class UserModelTestCase(TestCase):
     def test_cria_usuario(self):
         user = User.objects.create_user(
@@ -145,8 +146,8 @@ class EncarregadoAPITestCase(TestCase):
         payload = {
             "user": {
                 "email": "user2@email.com",
-                "nome":"Sandra Santos",
-                "role":"ENCARREGADO",
+                "nome": "Sandra Santos",
+                "role": "ENCARREGADO",
                 "password": "987456987"
             },
              "telefone": "+258879698468",
@@ -156,7 +157,6 @@ class EncarregadoAPITestCase(TestCase):
         response = self.client.post("/api/alunos/encarregados/", payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Encarregado.objects.count(), 2)
-
 
     def test_atualizar_encarregado(self):
         url = f"/api/alunos/encarregados/{self.encarregado.id}/"
@@ -205,7 +205,7 @@ class AlunoAPITestCase(TestCase):
 
     def test_listar_alunos(self):
         url = f"/api/alunos/encarregados/{self.encarregado.id}/alunos/"
-        response =  self.client.get(url)
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_criar_aluno(self):

@@ -9,6 +9,7 @@ class AlunoInline(admin.TabularInline):
     readonly_fields = ("id",)
     fields = ('nome', 'nrBI', 'data_nascimento', 'escola_dest', 'classe', 'rota', 'ativo', 'email', 'mensalidade')
 
+
 @admin.register(Aluno)
 class AlunoAdmin(BaseAdmin):
     list_display = ('id', 'nome', 'nrBI', 'data_nascimento', 'get_encarregado', 'escola_dest', 'classe', 'rota', 'ativo')
@@ -32,6 +33,7 @@ class AlunoAdmin(BaseAdmin):
         return obj.encarregado.user.nome if obj.encarregado else '-'
     get_encarregado.short_description = 'Encarregado'
     get_encarregado.admin_order_field = 'encarregado__user__nome'
+
 
 @admin.register(Encarregado)
 class EncarregadoAdmin(admin.ModelAdmin):

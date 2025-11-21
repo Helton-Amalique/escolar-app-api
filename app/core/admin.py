@@ -10,16 +10,16 @@ class CargoAdmin(admin.ModelAdmin):
     list_display = ('nome', 'salario_padrao')
     search_fields = ('nome',)
 
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
 
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
-    model= User
+    model = User
 
     list_display = ('email', 'nome', 'role', 'is_staff', 'is_active')
     list_filter = ('role', 'is_active', 'is_staff')
-
 
     search_fields = ('email', 'nome')
     ordering = ('email',)
@@ -52,5 +52,4 @@ class UserAdmin(BaseUserAdmin):
         super().save_model(request, obj, form, change)
         if obj.role:
             role_group, created = Group.objects.get_or_create(name=obj.role.nome.upper())
-                # adiciona ao grupo do role sem apagar os outros
             obj.groups.add(role_group)
